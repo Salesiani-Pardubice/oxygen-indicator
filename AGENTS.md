@@ -10,7 +10,7 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 
 ## Project status
 
-Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Only the project skeleton exists so far: a static server with placeholder display and admin pages.
+Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Done so far: project skeleton, game core + display with live gauges. The admin page is still a placeholder.
 
 ## Commands
 
@@ -24,7 +24,10 @@ Early implementation. `README.md` is the original design brief (in Czech); this 
 - **Server:** plain Node.js (`node:http`), ES modules, **no runtime dependencies**. Keep it that way unless there is a strong reason; the app has to be runnable offline after copying the folder.
 - **Realtime:** server → clients via SSE (Server-Sent Events); clients → server via `POST`.
 - **Web:** vanilla HTML/CSS/JS in `public/`, no build step. `/` is the display, `/admin` the admin page. Sounds are generated with Web Audio (no audio files).
-- `server/app.js` — HTTP handler and static serving; `server/index.js` — startup; `server/network.js` — LAN address discovery; `test/` — tests.
+- `server/game.js` — the authoritative game state (`createGame({ clock })`: `tick()`, `snapshot()`, plus the commands). The clock is injectable, so tests advance fake time instead of waiting.
+- `server/app.js` — HTTP routing and static serving; `server/sse.js` — SSE hub; `server/http-utils.js` — response helpers; `server/index.js` — wiring and the 250 ms tick/broadcast loop; `server/network.js` — LAN address discovery.
+- `public/js/display.js` renders snapshots into gauges (DOM updated in place so CSS transitions work); `levels.js` (ok/low/critical/empty thresholds) and `format.js` (time formatting, Czech preset labels) are shared helpers.
+- `test/` — tests mirror the server modules.
 - `data/` (runtime state backup) is gitignored.
 
 ## What this is
@@ -53,7 +56,7 @@ Depletion per second = `100 / preset_duration_s × global_multiplier × event_mu
 ### Planned features (one PR each)
 
 1. Project skeleton (done)
-2. Game core + display with gauges and live updates
+2. Game core + display with gauges and live updates (done)
 3. Click-to-refill with lock and rate limit
 4. Audio alarm on the display (starts after a "start game" click because of browser autoplay rules)
 5. Admin: PIN, names, number of miners, pause, speed, presets

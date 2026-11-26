@@ -1,17 +1,22 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../server/app.js';
+import { createGame } from '../server/game.js';
+import { createSseHub } from '../server/sse.js';
 
 let server;
 let baseUrl;
 
 before(async () => {
-  server = createApp();
+  server = createApp({ game: createGame(), publicHub: createSseHub() });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
 });
 
-after(() => new Promise((resolve) => server.close(resolve)));
+after(() => {
+  server.closeAllConnections();
+  return new Promise((resolve) => server.close(resolve));
+});
 
 test('health endpoint reports ok', async () => {
   const res = await fetch(`${baseUrl}/api/health`);
@@ -48,4 +53,23 @@ test('does not serve files outside the public directory', async () => {
 test('rejects non-GET methods', async () => {
   const res = await fetch(`${baseUrl}/api/health`, { method: 'POST' });
   assert.equal(res.status, 405);
+});
+
+test('streams the game snapshot over SSE', async () => {
+  const controller = new AbortController();
+  const res = await fetch(`${baseUrl}/api/events`, { signal: controller.signal });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/event-stream/);
+
+  const reader = res.body.getReader();
+  let text = '';
+  while (!text.includes('data: ')) {
+    const { value } = await reader.read();
+    text += new TextDecoder().decode(value);
+  }
+  controller.abort();
+
+  const snapshot = JSON.parse(text.split('data: ')[1]);
+  assert.equal(snapshot.miners.length, 4);
+  assert.equal(snapshot.paused, false);
 });

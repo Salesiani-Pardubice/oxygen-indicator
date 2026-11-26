@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kyslíkový indikátor</title>
     <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/display.css" />
   </head>
-  <body>
-    <main>
+  <body class="display">
+    <header class="display-header">
       <h1>Kyslíkový indikátor</h1>
-      <p>Server běží. Ukazatele kyslíku přibudou v další verzi.</p>
-    </main>
+      <div id="status" class="status" hidden>Spojení se serverem přerušeno</div>
+    </header>
+    <div id="banner" class="banner" hidden>HRA JE POZASTAVENA</div>
+    <main id="gauges" class="gauges"></main>
+    <script type="module" src="/js/display.js"></script>
   </body>
 </html>

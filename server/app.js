@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { send, sendJson } from './http-utils.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));
 
@@ -20,11 +21,6 @@ const PAGE_ALIASES = {
   '/': '/index.html',
   '/admin': '/admin.html',
 };
-
-function send(res, status, body, contentType = 'text/plain; charset=utf-8') {
-  res.writeHead(status, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
-  res.end(body);
-}
 
 async function serveStatic(pathname, req, res) {
   const requested = PAGE_ALIASES[pathname] ?? pathname;
@@ -45,12 +41,14 @@ async function serveStatic(pathname, req, res) {
   }
 }
 
-export function createApp() {
-  return createServer(async (req, res) => {
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      return send(res, 405, 'Method not allowed');
-    }
+export function createApp({ game, publicHub }) {
+  // Dynamic endpoints, keyed by "METHOD /path".
+  const routes = {
+    'GET /api/health': (req, res) => sendJson(res, 200, { ok: true }),
+    'GET /api/events': (req, res) => publicHub.connect(req, res, game.snapshot()),
+  };
 
+  return createServer(async (req, res) => {
     let pathname;
     try {
       pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
@@ -58,10 +56,12 @@ export function createApp() {
       return send(res, 400, 'Bad request');
     }
 
-    if (pathname === '/api/health') {
-      return send(res, 200, JSON.stringify({ ok: true }), MIME_TYPES['.json']);
-    }
+    const route = routes[`${req.method} ${pathname}`];
+    if (route) return route(req, res);
 
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return send(res, 405, 'Method not allowed');
+    }
     await serveStatic(pathname, req, res);
   });
 }
