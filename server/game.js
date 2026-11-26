@@ -1,3 +1,5 @@
+import { EVENT_DURATION_RANGE } from './events-config.js';
+
 export const FULL_OXYGEN = 100;
 export const MIN_MINERS = 4;
 export const MAX_MINERS = 6;
@@ -30,6 +32,7 @@ export function createGame({
   clock = () => performance.now(),
   minerCount = MIN_MINERS,
   startPaused = true,
+  eventDefs = [],
 } = {}) {
   let lastTick = clock();
 
@@ -40,6 +43,9 @@ export function createGame({
     refillPerClick: DEFAULT_REFILL_PER_CLICK,
     // Only one miner can be refilled at a time: { minerId, clientId, lastActivity, lastClick }.
     refill: null,
+    // Running special events: { id, defId, label, multiplier, targets: 'all' | [minerId], remainingMs | null }.
+    events: [],
+    nextEventId: 1,
     miners: Array.from({ length: minerCount }, (_, index) => createMiner(index + 1)),
   };
 
@@ -47,9 +53,41 @@ export function createGame({
     return { id, name: `Horník ${id}`, oxygen: FULL_OXYGEN, preset: 'standard' };
   }
 
+  /** Product of the multipliers of all running events that affect this miner. */
+  function eventMultiplier(miner) {
+    let multiplier = 1;
+    for (const event of state.events) {
+      if (event.targets === 'all' || event.targets.includes(miner.id)) multiplier *= event.multiplier;
+    }
+    return multiplier;
+  }
+
   /** Oxygen lost per second, in percent of a full mask. */
   function ratePerSecond(miner) {
-    return (FULL_OXYGEN / state.presetSeconds[miner.preset]) * state.speed;
+    const base = (FULL_OXYGEN / state.presetSeconds[miner.preset]) * state.speed;
+    return base * eventMultiplier(miner);
+  }
+
+  /**
+   * Lets game time pass. Events that end part-way are applied only up to their end, so the result
+   * does not depend on how often tick() is called. Event timers only run while the game does.
+   */
+  function advance(seconds) {
+    let left = seconds;
+    while (left > 0) {
+      const timed = state.events.filter((event) => event.remainingMs !== null);
+      const untilNextEnd = timed.length
+        ? Math.min(...timed.map((event) => event.remainingMs)) / 1000
+        : Infinity;
+      const step = Math.min(left, untilNextEnd);
+
+      for (const miner of state.miners) {
+        miner.oxygen = Math.max(0, miner.oxygen - ratePerSecond(miner) * step);
+      }
+      for (const event of timed) event.remainingMs -= step * 1000;
+      state.events = state.events.filter((event) => event.remainingMs === null || event.remainingMs > 0.5);
+      left -= step;
+    }
   }
 
   function tick() {
@@ -59,10 +97,7 @@ export function createGame({
 
     if (state.refill && now - state.refill.lastActivity > REFILL_IDLE_MS) state.refill = null;
     if (state.paused || elapsedSeconds <= 0) return;
-
-    for (const miner of state.miners) {
-      miner.oxygen = Math.max(0, miner.oxygen - ratePerSecond(miner) * elapsedSeconds);
-    }
+    advance(elapsedSeconds);
   }
 
   /** Takes the refill lock for one miner. Fails while someone else holds it. */
@@ -123,6 +158,11 @@ export function createGame({
     while (state.miners.length < count) state.miners.push(createMiner(state.miners.length + 1));
     state.miners.length = count;
     if (state.refill && state.refill.minerId > count) state.refill = null;
+    // Events aimed only at removed miners have nobody left to affect.
+    for (const event of state.events) {
+      if (event.targets !== 'all') event.targets = event.targets.filter((id) => id <= count);
+    }
+    state.events = state.events.filter((event) => event.targets === 'all' || event.targets.length > 0);
     return { ok: true };
   }
 
@@ -166,11 +206,54 @@ export function createGame({
     return { ok: true };
   }
 
+  /**
+   * Starts a special event from the configured definitions. `durationSec` undefined uses the
+   * event's default, null runs until ended by hand; `targets` is "all" (default) or miner ids.
+   */
+  function startEvent(defId, { durationSec, targets = 'all' } = {}) {
+    const def = eventDefs.find((candidate) => candidate.id === defId);
+    if (!def) return invalid('Neznámá událost.');
+
+    const duration = durationSec === undefined ? def.durationSec : durationSec;
+    const { min, max } = EVENT_DURATION_RANGE;
+    if (duration !== null && !inRange(duration, EVENT_DURATION_RANGE)) {
+      return invalid(`Trvání musí být mezi ${min} a ${max} s.`);
+    }
+
+    if (targets !== 'all') {
+      const valid =
+        Array.isArray(targets) &&
+        targets.length > 0 &&
+        new Set(targets).size === targets.length &&
+        targets.every((id) => state.miners.some((miner) => miner.id === id));
+      if (!valid) return invalid('Neplatný výběr horníků.');
+    }
+
+    const id = state.nextEventId++;
+    state.events.push({
+      id,
+      defId: def.id,
+      label: def.label,
+      multiplier: def.multiplier,
+      targets: targets === 'all' ? 'all' : [...targets],
+      remainingMs: duration === null ? null : duration * 1000,
+    });
+    return { ok: true, id };
+  }
+
+  function endEvent(id) {
+    const before = state.events.length;
+    state.events = state.events.filter((event) => event.id !== id);
+    if (state.events.length === before) return { ok: false, error: 'unknown-event' };
+    return { ok: true };
+  }
+
   /** Starts over: everybody gets a full mask and the game waits paused for the admin. */
   function resetGame() {
     for (const miner of state.miners) miner.oxygen = FULL_OXYGEN;
     state.paused = true;
     state.refill = null;
+    state.events = [];
     lastTick = clock();
     return { ok: true };
   }
@@ -186,6 +269,14 @@ export function createGame({
         oxygen: roundOxygen(miner.oxygen),
         preset: miner.preset,
         rate: roundOxygen(ratePerSecond(miner)),
+        boost: eventMultiplier(miner),
+      })),
+      events: state.events.map((event) => ({
+        id: event.id,
+        label: event.label,
+        multiplier: event.multiplier,
+        targets: event.targets,
+        remainingSec: event.remainingMs === null ? null : Math.ceil(event.remainingMs / 1000),
       })),
     };
   }
@@ -200,6 +291,7 @@ export function createGame({
         minMiners: MIN_MINERS,
         maxMiners: MAX_MINERS,
       },
+      eventDefs,
     };
   }
 
@@ -217,6 +309,8 @@ export function createGame({
     setPreset,
     setPresetSeconds,
     setRefillPerClick,
+    startEvent,
+    endEvent,
     resetGame,
   };
 }

@@ -1,5 +1,5 @@
 import { levelOf } from './levels.js';
-import { formatDuration, PRESET_LABELS } from './format.js';
+import { describeTargets, formatDuration, formatMultiplier, PRESET_LABELS } from './format.js';
 import { getClientId, postJson } from './api.js';
 import { alarmPattern } from './alarm-pattern.js';
 import { createAlarm } from './alarm.js';
@@ -17,6 +17,7 @@ const pumpButton = document.querySelector('#pump-button');
 const pumpDone = document.querySelector('#pump-done');
 const soundButton = document.querySelector('#sound');
 const speedEl = document.querySelector('#speed');
+const eventsEl = document.querySelector('#events');
 
 const clientId = getClientId();
 const tones = createTonePlayer();
@@ -68,6 +69,22 @@ function showToast(message) {
   toastTimer = setTimeout(() => (toastEl.hidden = true), 2500);
 }
 
+function renderEvents(snapshot) {
+  eventsEl.hidden = snapshot.events.length === 0;
+  eventsEl.replaceChildren(
+    ...snapshot.events.map((event) => {
+      const chip = document.createElement('div');
+      chip.className = 'event-chip';
+      chip.dataset.direction = event.multiplier > 1 ? 'up' : 'down';
+      const time = event.remainingSec === null ? 'do odvolání' : formatDuration(event.remainingSec);
+      chip.textContent =
+        `${event.label} ${formatMultiplier(event.multiplier)} · ${time} · ` +
+        describeTargets(event.targets, snapshot.miners);
+      return chip;
+    }),
+  );
+}
+
 function render(snapshot) {
   lastSnapshot = snapshot;
   gaugesEl.style.setProperty('--count', snapshot.miners.length);
@@ -75,6 +92,7 @@ function render(snapshot) {
   speedEl.hidden = snapshot.speed === 1;
   speedEl.textContent = `Rychlost ×${snapshot.speed}`;
   gaugesEl.classList.toggle('refillable', canRefill);
+  renderEvents(snapshot);
 
   const seen = new Set();
   for (const miner of snapshot.miners) {
@@ -93,7 +111,9 @@ function render(snapshot) {
     gauge.percent.textContent = `${Math.round(miner.oxygen)} %`;
     gauge.remaining.textContent =
       snapshot.refill?.minerId === miner.id ? 'Doplňuje se…' : remainingText(miner, snapshot.paused);
-    gauge.mode.textContent = PRESET_LABELS[miner.preset] ?? miner.preset;
+    const preset = PRESET_LABELS[miner.preset] ?? miner.preset;
+    gauge.mode.textContent = miner.boost === 1 ? preset : `${preset} · ${formatMultiplier(miner.boost)}`;
+    gauge.card.dataset.boost = miner.boost > 1 ? 'up' : miner.boost < 1 ? 'down' : 'none';
   }
 
   for (const [id, gauge] of gauges) {

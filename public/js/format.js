@@ -10,3 +10,17 @@ export const PRESET_LABELS = {
   standard: 'Normál',
   work: 'Práce',
 };
+
+/** "všichni" or the names of the targeted miners, for the event banners. */
+export function describeTargets(targets, miners) {
+  if (targets === 'all') return 'všichni';
+  return miners
+    .filter((miner) => targets.includes(miner.id))
+    .map((miner) => miner.name)
+    .join(', ');
+}
+
+/** "×2", "×0.5" */
+export function formatMultiplier(multiplier) {
+  return `×${Number(multiplier.toFixed(2))}`;
+}

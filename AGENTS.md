@@ -10,7 +10,7 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 
 ## Project status
 
-Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Done so far: project skeleton, game core + display with live gauges, click-to-refill, audio alarm, admin (PIN, pause/speed, miners, presets). Events, log and persistence are still to come.
+Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Done so far: project skeleton, game core + display with live gauges, click-to-refill, audio alarm, admin (PIN, pause/speed, miners, presets), special events. Log/alerts and persistence are still to come.
 
 ## Commands
 
@@ -29,7 +29,8 @@ Early implementation. `README.md` is the original design brief (in Czech); this 
 - `server/game.js` — the authoritative game state (`createGame({ clock })`: `tick()`, `snapshot()`, plus the commands). The clock is injectable, so tests advance fake time instead of waiting.
 - Refill API (`/api/refill/start|click|stop`, `/api/session`): `server/local.js` restricts it to requests coming from the server PC itself (loopback or one of its own interface addresses), so phones in the hotspot cannot refill. The lock owner is a per-tab `clientId` generated in `public/js/api.js`.
 - Admin: `server/auth.js` (PIN → HMAC-derived session cookie, stateless so it survives restarts; 5 wrong PINs lock an address for 30 s), `server/admin-commands.js` (command type → game method; commands are validated inside `game.js` and return `{ ok }` / `{ ok: false, error, message }`). API: `POST /api/admin/login|logout|command`, `GET /api/admin/session|events`. The admin SSE stream carries `game.adminSnapshot()` (snapshot + settings). The game starts **paused**; the admin starts it.
-- Admin client: `public/js/admin.js` (+ `ui.js` segmented buttons/toast). It updates DOM in place and never overwrites an input that has focus.
+- Events: definitions live in `config/events.json` (`id`, `label`, `multiplier`, `durationSec` or `null` = until ended), validated at startup by `server/events-config.js` (the server refuses to start on a bad file). Running events are game state: `startEvent(defId, { durationSec, targets })` (durationSec `undefined` = definition default, `null` = until ended; targets `'all'` or miner ids) and `endEvent(id)`. Overlapping events multiply. `advance()` in `game.js` splits time at event ends, so results don't depend on tick frequency, and event timers freeze while the game is paused. Snapshots carry `events` and a per-miner `boost`.
+- Admin client: `public/js/admin.js` (+ `ui.js` segmented buttons/toast, `admin-events.js` for the events card). It updates DOM in place and never overwrites an input that has focus.
 - `server/app.js` — HTTP routing and static serving; `server/sse.js` — SSE hub; `server/http-utils.js` — response helpers; `server/index.js` — wiring and the 250 ms tick/broadcast loop; `server/network.js` — LAN address discovery.
 - `public/js/display.js` renders snapshots into gauges (DOM updated in place so CSS transitions work); `levels.js` (ok/low/critical/empty thresholds) and `format.js` (time formatting, Czech preset labels) are shared helpers.
 - Alarm: `public/js/alarm-pattern.js` (pure: state → off/beep/siren; follows the most endangered miner, pitch differs per miner), `alarm.js` (loop scheduling with injected `playTone`), `audio.js` (Web Audio output + persisted mute). Audio only starts after a user gesture, so the display has a "Zapnout zvuk" button and the first click anywhere also unlocks it.
@@ -66,11 +67,11 @@ Depletion per second = `100 / preset_duration_s × global_multiplier × event_mu
 3. Click-to-refill with lock and rate limit (done)
 4. Audio alarm on the display (done; includes a mute button)
 5. Admin: PIN, names, number of miners, pause, speed, presets (done)
-6. Special events with countdown
+6. Special events with countdown (done)
 7. Expiry log + phone alerts
 8. State backup to `data/state.json` (restart restores the game paused), URL printout, QR code to admin
 
-Unscheduled ideas: manual +/- oxygen per miner, single-miner events (e.g. leak), time-at-zero per miner and CSV export of the log, projector mode with team colors.
+Unscheduled ideas: manual +/- oxygen per miner, sound on event start, time-at-zero per miner and CSV export of the log, projector mode with team colors.
 
 ## Notes for working here
 

@@ -206,3 +206,58 @@ input {
   color: var(--bg);
   font-weight: 600;
 }
+
+.segmented.wrap {
+  flex-wrap: wrap;
+}
+
+.segmented.wrap button {
+  flex: 1 1 auto;
+}
+
+.hint {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.inline-field {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+#event-start {
+  margin-top: 1rem;
+}
+
+.active-events {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.active-events.empty::before {
+  content: 'Žádná událost neprobíhá.';
+  color: var(--muted);
+}
+
+.active-event {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  background: rgba(240, 69, 90, 0.18);
+  font-variant-numeric: tabular-nums;
+}
+
+.active-event span {
+  flex: 1;
+}
+
+button.danger-outline {
+  border-color: var(--critical);
+  color: var(--critical);
+}

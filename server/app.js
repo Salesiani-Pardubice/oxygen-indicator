@@ -49,6 +49,7 @@ const ERROR_STATUS = {
   busy: 409,
   'not-refilling': 409,
   'unknown-miner': 404,
+  'unknown-event': 404,
 };
 
 export function createApp({ game, publicHub, adminHub, auth, allowRemoteRefill = false }) {

@@ -37,6 +37,23 @@
       </section>
 
       <section class="card">
+        <h2>Události</h2>
+        <div id="active-events" class="active-events"></div>
+        <h3>Spustit událost</h3>
+        <div id="event-defs" class="segmented wrap"></div>
+        <p id="event-hint" class="hint"></p>
+        <h3>Trvání</h3>
+        <div id="event-duration" class="segmented"></div>
+        <label id="event-custom" class="inline-field" hidden>
+          Vlastní trvání (s)
+          <input id="event-custom-seconds" type="number" min="5" max="3600" step="5" value="60" />
+        </label>
+        <h3>Koho se týká</h3>
+        <div id="event-targets" class="segmented wrap"></div>
+        <button id="event-start" class="primary big" type="button">Spustit událost</button>
+      </section>
+
+      <section class="card">
         <h2>Horníci</h2>
         <h3>Počet horníků</h3>
         <div id="miner-count" class="segmented"></div>

@@ -7,5 +7,12 @@ export const adminCommands = {
   setPreset: (game, body) => game.setPreset(body.id, body.preset),
   setPresetSeconds: (game, body) => game.setPresetSeconds(body.preset, body.seconds),
   setRefillPerClick: (game, body) => game.setRefillPerClick(body.value),
+  startEvent: (game, body) =>
+    game.startEvent(body.eventId, {
+      // A missing durationSec means "use the event's default"; an explicit null means "until ended".
+      durationSec: 'durationSec' in body ? body.durationSec : undefined,
+      targets: body.targets,
+    }),
+  endEvent: (game, body) => game.endEvent(body.id),
   resetGame: (game) => game.resetGame(),
 };

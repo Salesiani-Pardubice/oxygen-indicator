@@ -1,5 +1,6 @@
 import { createApp } from './app.js';
 import { createAuth, generatePin } from './auth.js';
+import { loadEventDefs } from './events-config.js';
 import { createGame } from './game.js';
 import { createSseHub } from './sse.js';
 import { lanAddresses } from './network.js';
@@ -11,7 +12,7 @@ const ALLOW_REMOTE_REFILL = process.env.ALLOW_REMOTE_REFILL === '1';
 
 const ADMIN_PIN = process.env.ADMIN_PIN || generatePin();
 
-const game = createGame();
+const game = createGame({ eventDefs: loadEventDefs() });
 const publicHub = createSseHub();
 const adminHub = createSseHub();
 const auth = createAuth({ pin: ADMIN_PIN });

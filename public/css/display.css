@@ -239,3 +239,35 @@ body.display {
   color: #1b1200;
   font-weight: 700;
 }
+
+.events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0 1.5rem;
+}
+
+.event-chip {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--critical);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-chip[data-direction='down'] {
+  background: var(--ok);
+  color: #04210f;
+}
+
+.gauge[data-boost='up'] .gauge-mode {
+  color: var(--critical);
+  font-weight: 700;
+}
+
+.gauge[data-boost='down'] .gauge-mode {
+  color: var(--ok);
+  font-weight: 700;
+}

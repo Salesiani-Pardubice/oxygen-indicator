@@ -2,6 +2,7 @@ import { levelOf } from './levels.js';
 import { PRESET_LABELS } from './format.js';
 import { postJson } from './api.js';
 import { createSegmented, createToast } from './ui.js';
+import { createEventsPanel } from './admin-events.js';
 
 const $ = (selector) => document.querySelector(selector);
 const loginEl = $('#login');
@@ -58,6 +59,8 @@ logoutEl.addEventListener('click', async () => {
   await postJson('/api/admin/logout', {});
   location.reload();
 });
+
+const eventsPanel = createEventsPanel({ command });
 
 // --- game controls -----------------------------------------------------------------------
 
@@ -180,6 +183,7 @@ function render(next) {
   );
   renderMiners(next.miners);
   renderSettings(next.settings);
+  eventsPanel.render(next);
 }
 
 // --- startup -----------------------------------------------------------------------------

@@ -243,3 +243,122 @@ test('resetGame refills everybody, pauses and releases the lock, but keeps names
   assert.equal(snapshot.miners[0].name, 'Karel');
   assert.equal(snapshot.miners[0].preset, 'work');
 });
+
+const EVENT_DEFS = [
+  { id: 'bomb', label: 'Prasklá bomba', multiplier: 2, durationSec: 60 },
+  { id: 'collapse', label: 'Zával', multiplier: 1.5, durationSec: null },
+  { id: 'ventilation', label: 'Ventilace', multiplier: 0.5, durationSec: 90 },
+];
+
+const eventGame = () => createTestGame({ eventDefs: EVENT_DEFS });
+
+test('an event multiplies depletion for everybody by default', () => {
+  const { game, advance } = eventGame();
+  assert.equal(game.startEvent('bomb').ok, true);
+  advance(10);
+  assert.equal(game.snapshot().miners[0].oxygen, 83.33);
+  assert.equal(game.snapshot().miners[0].boost, 2);
+});
+
+test('an event ends by itself and depletion returns to normal', () => {
+  const { game, advance } = eventGame();
+  game.startEvent('bomb', { durationSec: 30 });
+  advance(30); // 30 s at x2 = 50 %
+  assert.equal(game.snapshot().events.length, 0);
+  assert.equal(game.snapshot().miners[0].oxygen, 50);
+  advance(30); // back to x1 = another 25 %
+  assert.equal(game.snapshot().miners[0].oxygen, 25);
+});
+
+test('a long gap between ticks is split at the end of the event', () => {
+  const { game, advance } = eventGame();
+  game.startEvent('bomb', { durationSec: 10 });
+  advance(40); // 10 s at x2 (16.67 %) + 30 s at x1 (25 %)
+  assert.equal(game.snapshot().miners[0].oxygen, 58.33);
+});
+
+test('an event without duration runs until it is ended by hand', () => {
+  const { game, advance } = eventGame();
+  const { id } = game.startEvent('collapse');
+  advance(3000);
+  assert.equal(game.snapshot().events.length, 1);
+  assert.equal(game.snapshot().events[0].remainingSec, null);
+  assert.deepEqual(game.endEvent(id), { ok: true });
+  assert.equal(game.snapshot().events.length, 0);
+});
+
+test('the duration can be overridden, or removed with null', () => {
+  const { game } = eventGame();
+  game.startEvent('bomb', { durationSec: 20 });
+  game.startEvent('bomb', { durationSec: null });
+  game.startEvent('collapse', { durationSec: 45 });
+  const [custom, forever, collapse] = game.snapshot().events;
+  assert.equal(custom.remainingSec, 20);
+  assert.equal(forever.remainingSec, null);
+  assert.equal(collapse.remainingSec, 45);
+});
+
+test('an event can target selected miners only', () => {
+  const { game, advance } = eventGame();
+  game.startEvent('bomb', { targets: [2, 3] });
+  advance(30);
+  const boosts = game.snapshot().miners.map((miner) => miner.boost);
+  assert.deepEqual(boosts, [1, 2, 2, 1]);
+  const oxygen = game.snapshot().miners.map((miner) => miner.oxygen);
+  assert.deepEqual(oxygen, [75, 50, 50, 75]);
+});
+
+test('overlapping events multiply', () => {
+  const { game } = eventGame();
+  game.startEvent('bomb');
+  game.startEvent('ventilation');
+  game.startEvent('collapse');
+  assert.equal(game.snapshot().miners[0].boost, 1.5); // 2 * 0.5 * 1.5
+});
+
+test('event timers freeze while the game is paused', () => {
+  const { game, advance } = eventGame();
+  game.startEvent('bomb', { durationSec: 30 });
+  advance(10);
+  game.setPaused(true);
+  advance(100);
+  assert.equal(game.snapshot().events[0].remainingSec, 20);
+  game.setPaused(false);
+  advance(20);
+  assert.equal(game.snapshot().events.length, 0);
+});
+
+test('invalid events are rejected', () => {
+  const { game } = eventGame();
+  assert.equal(game.startEvent('nope').error, 'invalid');
+  assert.equal(game.startEvent('bomb', { durationSec: 1 }).error, 'invalid');
+  assert.equal(game.startEvent('bomb', { durationSec: 99999 }).error, 'invalid');
+  assert.equal(game.startEvent('bomb', { targets: [] }).error, 'invalid');
+  assert.equal(game.startEvent('bomb', { targets: [9] }).error, 'invalid');
+  assert.equal(game.startEvent('bomb', { targets: [1, 1] }).error, 'invalid');
+  assert.equal(game.startEvent('bomb', { targets: 'some' }).error, 'invalid');
+  assert.equal(game.snapshot().events.length, 0);
+  assert.equal(game.endEvent(42).error, 'unknown-event');
+});
+
+test('events aimed at removed miners disappear when the miner count shrinks', () => {
+  const { game } = createTestGame({ eventDefs: EVENT_DEFS, minerCount: 6 });
+  game.startEvent('bomb', { targets: [5, 6] });
+  game.startEvent('bomb', { targets: [1, 6] });
+  game.setMinerCount(4);
+  const events = game.snapshot().events;
+  assert.equal(events.length, 1);
+  assert.deepEqual(events[0].targets, [1]);
+});
+
+test('resetGame ends all events', () => {
+  const { game } = eventGame();
+  game.startEvent('bomb');
+  game.resetGame();
+  assert.equal(game.snapshot().events.length, 0);
+});
+
+test('the admin snapshot lists the event definitions', () => {
+  const { game } = eventGame();
+  assert.equal(game.adminSnapshot().eventDefs.length, 3);
+});

@@ -18,7 +18,10 @@ const post = (path, body) =>
   });
 
 before(async () => {
-  game = createGame({ startPaused: false });
+  game = createGame({
+    startPaused: false,
+    eventDefs: [{ id: 'bomb', label: 'Prasklá bomba', multiplier: 2, durationSec: 60 }],
+  });
   server = createApp({
     game,
     publicHub: createSseHub(),
@@ -186,4 +189,26 @@ test('the admin stream sends the admin snapshot with settings', async () => {
 test('logout clears the cookie', async () => {
   const res = await post('/api/admin/logout', {});
   assert.match(res.headers.get('set-cookie'), /Max-Age=0/);
+});
+
+test('the admin can start and end events', async () => {
+  const { cookie } = await adminLogin();
+
+  const started = await adminPost(cookie, { type: 'startEvent', eventId: 'bomb', durationSec: null, targets: [1, 2] });
+  assert.equal(started.status, 200);
+  const { id } = await started.json();
+  assert.equal(game.snapshot().events.length, 1);
+  assert.equal(game.snapshot().events[0].remainingSec, null);
+  assert.deepEqual(game.snapshot().events[0].targets, [1, 2]);
+
+  assert.equal((await adminPost(cookie, { type: 'startEvent', eventId: 'unknown' })).status, 400);
+  assert.equal((await adminPost(cookie, { type: 'endEvent', id: 12345 })).status, 404);
+  assert.equal((await adminPost(cookie, { type: 'endEvent', id })).status, 200);
+  assert.equal(game.snapshot().events.length, 0);
+
+  // without durationSec the event's default applies
+  await adminPost(cookie, { type: 'startEvent', eventId: 'bomb' });
+  assert.equal(game.snapshot().events[0].remainingSec, 60);
+  await adminPost(cookie, { type: 'resetGame' });
+  await adminPost(cookie, { type: 'setPaused', paused: false });
 });
