@@ -12,17 +12,29 @@ export const REFILL_IDLE_MS = 10_000;
 // Faster clicks are ignored, which stops auto-clickers (~12 clicks per second).
 const MIN_CLICK_INTERVAL_MS = 80;
 
+const SPEED_RANGE = { min: 0.25, max: 5 };
+const PRESET_SECONDS_RANGE = { min: 10, max: 1800 };
+const REFILL_PER_CLICK_RANGE = { min: 0.1, max: 10 };
+const MAX_NAME_LENGTH = 20;
+
 const roundOxygen = (value) => Math.round(value * 100) / 100;
+const invalid = (message) => ({ ok: false, error: 'invalid', message });
+const inRange = (value, { min, max }) =>
+  typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
 
 /**
  * The authoritative game state. Time comes from an injectable monotonic clock
  * (milliseconds) so the whole thing can be tested without waiting.
  */
-export function createGame({ clock = () => performance.now(), minerCount = MIN_MINERS } = {}) {
+export function createGame({
+  clock = () => performance.now(),
+  minerCount = MIN_MINERS,
+  startPaused = true,
+} = {}) {
   let lastTick = clock();
 
   const state = {
-    paused: false,
+    paused: startPaused,
     speed: 1,
     presetSeconds: { ...DEFAULT_PRESET_SECONDS },
     refillPerClick: DEFAULT_REFILL_PER_CLICK,
@@ -89,6 +101,80 @@ export function createGame({ clock = () => performance.now(), minerCount = MIN_M
     return { ok: true };
   }
 
+  function setPaused(paused) {
+    if (typeof paused !== 'boolean') return invalid('Neplatný stav hry.');
+    state.paused = paused;
+    return { ok: true };
+  }
+
+  function setSpeed(speed) {
+    if (!inRange(speed, SPEED_RANGE)) {
+      return invalid(`Rychlost musí být mezi ${SPEED_RANGE.min} a ${SPEED_RANGE.max}.`);
+    }
+    state.speed = speed;
+    return { ok: true };
+  }
+
+  /** Changes the number of miners; new miners start with a full mask, removed ones are the last. */
+  function setMinerCount(count) {
+    if (!Number.isInteger(count) || count < MIN_MINERS || count > MAX_MINERS) {
+      return invalid(`Počet horníků musí být ${MIN_MINERS} až ${MAX_MINERS}.`);
+    }
+    while (state.miners.length < count) state.miners.push(createMiner(state.miners.length + 1));
+    state.miners.length = count;
+    if (state.refill && state.refill.minerId > count) state.refill = null;
+    return { ok: true };
+  }
+
+  function renameMiner(id, name) {
+    const miner = state.miners.find((candidate) => candidate.id === id);
+    if (!miner) return { ok: false, error: 'unknown-miner' };
+    if (typeof name !== 'string') return invalid('Neplatné jméno.');
+    miner.name = name.trim().slice(0, MAX_NAME_LENGTH) || `Horník ${id}`;
+    return { ok: true };
+  }
+
+  /** Sets the consumption preset of one miner, or of all of them with id "all". */
+  function setPreset(id, preset) {
+    if (!PRESET_KEYS.includes(preset)) return invalid('Neznámý režim spotřeby.');
+    if (id === 'all') {
+      for (const miner of state.miners) miner.preset = preset;
+      return { ok: true };
+    }
+    const miner = state.miners.find((candidate) => candidate.id === id);
+    if (!miner) return { ok: false, error: 'unknown-miner' };
+    miner.preset = preset;
+    return { ok: true };
+  }
+
+  function setPresetSeconds(preset, seconds) {
+    if (!PRESET_KEYS.includes(preset)) return invalid('Neznámý režim spotřeby.');
+    if (!inRange(seconds, PRESET_SECONDS_RANGE)) {
+      return invalid(`Doba musí být mezi ${PRESET_SECONDS_RANGE.min} a ${PRESET_SECONDS_RANGE.max} s.`);
+    }
+    state.presetSeconds[preset] = seconds;
+    return { ok: true };
+  }
+
+  function setRefillPerClick(value) {
+    if (!inRange(value, REFILL_PER_CLICK_RANGE)) {
+      return invalid(
+        `Doplnění za kliknutí musí být mezi ${REFILL_PER_CLICK_RANGE.min} a ${REFILL_PER_CLICK_RANGE.max} %.`,
+      );
+    }
+    state.refillPerClick = value;
+    return { ok: true };
+  }
+
+  /** Starts over: everybody gets a full mask and the game waits paused for the admin. */
+  function resetGame() {
+    for (const miner of state.miners) miner.oxygen = FULL_OXYGEN;
+    state.paused = true;
+    state.refill = null;
+    lastTick = clock();
+    return { ok: true };
+  }
+
   function snapshot() {
     return {
       paused: state.paused,
@@ -104,5 +190,33 @@ export function createGame({ clock = () => performance.now(), minerCount = MIN_M
     };
   }
 
-  return { tick, snapshot, startRefill, refillClick, stopRefill };
+  /** Everything the display gets, plus the settings only the admin needs. */
+  function adminSnapshot() {
+    return {
+      ...snapshot(),
+      settings: {
+        presetSeconds: { ...state.presetSeconds },
+        refillPerClick: state.refillPerClick,
+        minMiners: MIN_MINERS,
+        maxMiners: MAX_MINERS,
+      },
+    };
+  }
+
+  return {
+    tick,
+    snapshot,
+    adminSnapshot,
+    startRefill,
+    refillClick,
+    stopRefill,
+    setPaused,
+    setSpeed,
+    setMinerCount,
+    renameMiner,
+    setPreset,
+    setPresetSeconds,
+    setRefillPerClick,
+    resetGame,
+  };
 }

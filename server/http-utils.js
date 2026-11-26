@@ -5,13 +5,13 @@ export class HttpError extends Error {
   }
 }
 
-export function send(res, status, body, contentType = 'text/plain; charset=utf-8') {
-  res.writeHead(status, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
+export function send(res, status, body, contentType = 'text/plain; charset=utf-8', headers = {}) {
+  res.writeHead(status, { 'Content-Type': contentType, 'Cache-Control': 'no-store', ...headers });
   res.end(body);
 }
 
-export function sendJson(res, status, data) {
-  send(res, status, JSON.stringify(data), 'application/json; charset=utf-8');
+export function sendJson(res, status, data, headers) {
+  send(res, status, JSON.stringify(data), 'application/json; charset=utf-8', headers);
 }
 
 /** Reads a small JSON request body; an empty body counts as {}. */

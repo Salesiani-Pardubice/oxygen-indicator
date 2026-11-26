@@ -16,6 +16,7 @@ const pumpLevelEl = document.querySelector('#pump-level');
 const pumpButton = document.querySelector('#pump-button');
 const pumpDone = document.querySelector('#pump-done');
 const soundButton = document.querySelector('#sound');
+const speedEl = document.querySelector('#speed');
 
 const clientId = getClientId();
 const tones = createTonePlayer();
@@ -71,6 +72,8 @@ function render(snapshot) {
   lastSnapshot = snapshot;
   gaugesEl.style.setProperty('--count', snapshot.miners.length);
   bannerEl.hidden = !snapshot.paused;
+  speedEl.hidden = snapshot.speed === 1;
+  speedEl.textContent = `Rychlost ×${snapshot.speed}`;
   gaugesEl.classList.toggle('refillable', canRefill);
 
   const seen = new Set();

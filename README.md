@@ -27,4 +27,4 @@ Je potřeba Node.js 20 nebo novější (`node --version`). Aplikace nemá žádn
 npm start
 ```
 
-Server vypíše adresy displeje a administrace, např. `http://192.168.0.153:3000/` a `/admin`. Port jde změnit proměnnou `PORT` (`PORT=8080 npm start`). Testy se spouštějí příkazem `npm test`.
+Server vypíše adresy displeje a administrace, např. `http://192.168.0.153:3000/` a `/admin`, a také PIN do administrace. PIN se při každém startu vygeneruje náhodně, pevný jde nastavit proměnnou `ADMIN_PIN` (`ADMIN_PIN=1234 npm start`). Port jde změnit proměnnou `PORT` (`PORT=8080 npm start`). Hra po startu čeká pozastavená, spouští se v administraci. Testy se spouštějí příkazem `npm test`.

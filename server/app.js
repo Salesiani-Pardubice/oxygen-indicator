@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HttpError, readJson, send, sendJson } from './http-utils.js';
+import { adminCommands } from './admin-commands.js';
 import { isLocalRequest } from './local.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));
@@ -44,14 +45,22 @@ async function serveStatic(pathname, req, res) {
 
 // Maps the error codes returned by game commands to HTTP statuses.
 const ERROR_STATUS = {
+  invalid: 400,
   busy: 409,
   'not-refilling': 409,
   'unknown-miner': 404,
 };
 
-export function createApp({ game, publicHub, allowRemoteRefill = false }) {
+export function createApp({ game, publicHub, adminHub, auth, allowRemoteRefill = false }) {
   const canRefill = (req) => allowRemoteRefill || isLocalRequest(req);
-  const publish = () => publicHub.broadcast(game.snapshot());
+  const publish = () => {
+    publicHub.broadcast(game.snapshot());
+    adminHub.broadcast(game.adminSnapshot());
+  };
+
+  function requireAdmin(req) {
+    if (!auth.isAuthorized(req)) throw new HttpError(401, 'Přihlas se prosím PINem.');
+  }
 
   function respond(res, result) {
     if (result.ok) {
@@ -86,6 +95,31 @@ export function createApp({ game, publicHub, allowRemoteRefill = false }) {
     'POST /api/refill/stop': async (req, res) => {
       const body = await refillBody(req);
       respond(res, game.stopRefill(body.clientId));
+    },
+
+    'GET /api/admin/session': (req, res) => sendJson(res, 200, { authenticated: auth.isAuthorized(req) }),
+    'POST /api/admin/login': async (req, res) => {
+      const body = await readJson(req);
+      const result = auth.login(String(body.pin ?? ''), req.socket.remoteAddress);
+      if (result.ok) return sendJson(res, 200, { ok: true }, { 'Set-Cookie': result.cookie });
+      if (result.error === 'locked') {
+        const message = `Příliš mnoho pokusů, zkus to za ${result.retryAfterSec} s.`;
+        return sendJson(res, 429, { error: message });
+      }
+      sendJson(res, 401, { error: 'Špatný PIN.' });
+    },
+    'POST /api/admin/logout': (req, res) =>
+      sendJson(res, 200, { ok: true }, { 'Set-Cookie': auth.logoutCookie() }),
+    'GET /api/admin/events': (req, res) => {
+      requireAdmin(req);
+      adminHub.connect(req, res, game.adminSnapshot());
+    },
+    'POST /api/admin/command': async (req, res) => {
+      requireAdmin(req);
+      const body = await readJson(req);
+      const command = Object.hasOwn(adminCommands, body.type) ? adminCommands[body.type] : null;
+      if (!command) throw new HttpError(400, 'Neznámý příkaz.');
+      respond(res, command(game, body));
     },
   };
 

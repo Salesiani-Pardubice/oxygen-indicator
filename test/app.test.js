@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { createApp } from '../server/app.js';
 import { createGame } from '../server/game.js';
 import { createSseHub } from '../server/sse.js';
+import { createAuth } from '../server/auth.js';
 
+const PIN = '4321';
 let server;
 let baseUrl;
+let game;
 
 const post = (path, body) =>
   fetch(`${baseUrl}${path}`, {
@@ -15,7 +18,13 @@ const post = (path, body) =>
   });
 
 before(async () => {
-  server = createApp({ game: createGame(), publicHub: createSseHub() });
+  game = createGame({ startPaused: false });
+  server = createApp({
+    game,
+    publicHub: createSseHub(),
+    adminHub: createSseHub(),
+    auth: createAuth({ pin: PIN }),
+  });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
 });
@@ -105,4 +114,76 @@ test('refill requests are validated', async () => {
 
   const broken = await fetch(`${baseUrl}/api/refill/click`, { method: 'POST', body: '{nope' });
   assert.equal(broken.status, 400);
+});
+
+async function adminLogin(pin = PIN) {
+  const res = await post('/api/admin/login', { pin });
+  return { res, cookie: res.headers.get('set-cookie')?.split(';')[0] };
+}
+
+const adminPost = (cookie, body) =>
+  fetch(`${baseUrl}/api/admin/command`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify(body),
+  });
+
+test('admin session reports whether the request is authenticated', async () => {
+  assert.deepEqual(await (await fetch(`${baseUrl}/api/admin/session`)).json(), { authenticated: false });
+  const { cookie } = await adminLogin();
+  const session = await fetch(`${baseUrl}/api/admin/session`, { headers: { Cookie: cookie } });
+  assert.deepEqual(await session.json(), { authenticated: true });
+});
+
+test('a wrong PIN is rejected', async () => {
+  const { res, cookie } = await adminLogin('0000');
+  assert.equal(res.status, 401);
+  assert.equal(cookie, undefined);
+});
+
+test('admin endpoints require login', async () => {
+  const command = await post('/api/admin/command', { type: 'setPaused', paused: true });
+  assert.equal(command.status, 401);
+  const events = await fetch(`${baseUrl}/api/admin/events`);
+  assert.equal(events.status, 401);
+});
+
+test('an authenticated admin can run commands that change the game', async () => {
+  const { cookie } = await adminLogin();
+  assert.equal((await adminPost(cookie, { type: 'setPaused', paused: true })).status, 200);
+  assert.equal(game.snapshot().paused, true);
+
+  assert.equal((await adminPost(cookie, { type: 'renameMiner', id: 1, name: 'Karel' })).status, 200);
+  assert.equal(game.snapshot().miners[0].name, 'Karel');
+
+  const bad = await adminPost(cookie, { type: 'setSpeed', speed: 99 });
+  assert.equal(bad.status, 400);
+  assert.match((await bad.json()).message, /Rychlost/);
+
+  assert.equal((await adminPost(cookie, { type: 'doesNotExist' })).status, 400);
+  assert.equal((await adminPost(cookie, { type: 'constructor' })).status, 400);
+
+  await adminPost(cookie, { type: 'setPaused', paused: false });
+});
+
+test('the admin stream sends the admin snapshot with settings', async () => {
+  const { cookie } = await adminLogin();
+  const controller = new AbortController();
+  const res = await fetch(`${baseUrl}/api/admin/events`, {
+    headers: { Cookie: cookie },
+    signal: controller.signal,
+  });
+  const reader = res.body.getReader();
+  let text = '';
+  while (!text.includes('data: ')) text += new TextDecoder().decode((await reader.read()).value);
+  controller.abort();
+
+  const snapshot = JSON.parse(text.split('data: ')[1]);
+  assert.equal(snapshot.settings.maxMiners, 6);
+  assert.equal(snapshot.settings.presetSeconds.work, 60);
+});
+
+test('logout clears the cookie', async () => {
+  const res = await post('/api/admin/logout', {});
+  assert.match(res.headers.get('set-cookie'), /Max-Age=0/);
 });

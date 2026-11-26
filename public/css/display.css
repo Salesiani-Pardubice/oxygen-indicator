@@ -231,3 +231,11 @@ body.display {
     background: rgba(245, 165, 36, 0.25);
   }
 }
+
+.speed {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--low);
+  color: #1b1200;
+  font-weight: 700;
+}

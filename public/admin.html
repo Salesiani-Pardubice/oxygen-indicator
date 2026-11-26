@@ -5,11 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Administrace – Kyslíkový indikátor</title>
     <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
   </head>
-  <body>
-    <main class="placeholder">
+  <body class="admin">
+    <header class="admin-header">
       <h1>Administrace</h1>
-      <p>Ovládání hry přibude v další verzi.</p>
+      <span id="status" class="status" hidden>Bez spojení</span>
+      <button id="logout" class="link-button" type="button" hidden>Odhlásit</button>
+    </header>
+
+    <section id="login" class="card" hidden>
+      <form id="login-form">
+        <label for="pin">PIN (je vypsaný v konzoli serveru)</label>
+        <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off" required />
+        <button type="submit" class="primary">Přihlásit</button>
+        <p id="login-error" class="error" hidden></p>
+      </form>
+    </section>
+
+    <main id="panel" hidden>
+      <section class="card">
+        <h2>Hra</h2>
+        <p id="game-state" class="game-state"></p>
+        <button id="toggle-pause" class="primary big" type="button"></button>
+        <button id="reset" class="danger" type="button">Nová hra (doplnit všem a pozastavit)</button>
+      </section>
+
+      <section class="card">
+        <h2>Rychlost spotřeby</h2>
+        <div id="speed" class="segmented"></div>
+      </section>
+
+      <section class="card">
+        <h2>Horníci</h2>
+        <h3>Počet horníků</h3>
+        <div id="miner-count" class="segmented"></div>
+        <h3>Režim všem</h3>
+        <div id="all-presets" class="segmented"></div>
+        <div id="miners" class="miners"></div>
+      </section>
+
+      <details class="card">
+        <summary>Nastavení</summary>
+        <h3>Jak dlouho vydrží plná maska (s)</h3>
+        <div class="field-grid">
+          <label>Spánek <input id="seconds-sleep" type="number" min="10" max="1800" step="5" /></label>
+          <label>Normál <input id="seconds-standard" type="number" min="10" max="1800" step="5" /></label>
+          <label>Práce <input id="seconds-work" type="number" min="10" max="1800" step="5" /></label>
+        </div>
+        <h3>Doplnění jedním kliknutím (%)</h3>
+        <div class="field-grid">
+          <label>Kyslík na klik <input id="refill-per-click" type="number" min="0.1" max="10" step="0.1" /></label>
+        </div>
+      </details>
     </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="/js/admin.js"></script>
   </body>
 </html>
