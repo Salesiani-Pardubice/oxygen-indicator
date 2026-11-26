@@ -1,6 +1,9 @@
 import { levelOf } from './levels.js';
 import { formatDuration, PRESET_LABELS } from './format.js';
 import { getClientId, postJson } from './api.js';
+import { alarmPattern } from './alarm-pattern.js';
+import { createAlarm } from './alarm.js';
+import { createTonePlayer } from './audio.js';
 
 const gaugesEl = document.querySelector('#gauges');
 const statusEl = document.querySelector('#status');
@@ -12,8 +15,11 @@ const pumpNameEl = document.querySelector('#pump-name');
 const pumpLevelEl = document.querySelector('#pump-level');
 const pumpButton = document.querySelector('#pump-button');
 const pumpDone = document.querySelector('#pump-done');
+const soundButton = document.querySelector('#sound');
 
 const clientId = getClientId();
+const tones = createTonePlayer();
+const alarm = createAlarm({ playTone: tones.playTone });
 // Grace period after opening the pump panel, so a stale snapshot cannot close it right away.
 const PUMP_OPEN_GRACE_MS = 1500;
 
@@ -95,6 +101,7 @@ function render(snapshot) {
   }
 
   syncPump(snapshot);
+  alarm.update(alarmPattern(snapshot.miners, snapshot.paused));
 }
 
 function syncPump(snapshot) {
@@ -168,6 +175,30 @@ pumpButton.addEventListener('pointerdown', (event) => {
   click();
 });
 pumpDone.addEventListener('click', finishRefill);
+
+function renderSoundButton() {
+  soundButton.classList.toggle('attention', !tones.enabled);
+  if (!tones.enabled) soundButton.textContent = '🔈 Zapnout zvuk';
+  else soundButton.textContent = tones.muted ? '🔇 Zvuk ztlumen' : '🔊 Zvuk zapnut';
+}
+
+soundButton.addEventListener('click', () => {
+  if (!tones.enabled) {
+    tones.enable();
+    tones.playTone(880, 200); // confirms that the speakers work
+  } else {
+    tones.setMuted(!tones.muted);
+  }
+  renderSoundButton();
+});
+
+// Any first click on the page also unlocks audio, in case nobody pressed the sound button.
+document.addEventListener('pointerdown', (event) => {
+  if (tones.enabled || event.target.closest('#sound')) return;
+  tones.enable();
+  renderSoundButton();
+});
+renderSoundButton();
 
 function setConnected(connected) {
   statusEl.hidden = connected;

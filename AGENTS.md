@@ -10,7 +10,7 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 
 ## Project status
 
-Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Done so far: project skeleton, game core + display with live gauges, click-to-refill. The admin page is still a placeholder.
+Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Done so far: project skeleton, game core + display with live gauges, click-to-refill, audio alarm. The admin page is still a placeholder.
 
 ## Commands
 
@@ -29,7 +29,8 @@ Early implementation. `README.md` is the original design brief (in Czech); this 
 - Refill API (`/api/refill/start|click|stop`, `/api/session`): `server/local.js` restricts it to requests coming from the server PC itself (loopback or one of its own interface addresses), so phones in the hotspot cannot refill. The lock owner is a per-tab `clientId` generated in `public/js/api.js`.
 - `server/app.js` — HTTP routing and static serving; `server/sse.js` — SSE hub; `server/http-utils.js` — response helpers; `server/index.js` — wiring and the 250 ms tick/broadcast loop; `server/network.js` — LAN address discovery.
 - `public/js/display.js` renders snapshots into gauges (DOM updated in place so CSS transitions work); `levels.js` (ok/low/critical/empty thresholds) and `format.js` (time formatting, Czech preset labels) are shared helpers.
-- `test/` — tests mirror the server modules.
+- Alarm: `public/js/alarm-pattern.js` (pure: state → off/beep/siren; follows the most endangered miner, pitch differs per miner), `alarm.js` (loop scheduling with injected `playTone`), `audio.js` (Web Audio output + persisted mute). Audio only starts after a user gesture, so the display has a "Zapnout zvuk" button and the first click anywhere also unlocks it.
+- `test/` — tests mirror the server modules and the pure client modules (`public/js/*.js` that don't touch the DOM can be imported in tests).
 - `data/` (runtime state backup) is gitignored.
 
 ## What this is
@@ -60,13 +61,13 @@ Depletion per second = `100 / preset_duration_s × global_multiplier × event_mu
 1. Project skeleton (done)
 2. Game core + display with gauges and live updates (done)
 3. Click-to-refill with lock and rate limit (done)
-4. Audio alarm on the display (starts after a "start game" click because of browser autoplay rules)
+4. Audio alarm on the display (done; includes a mute button)
 5. Admin: PIN, names, number of miners, pause, speed, presets
 6. Special events with countdown
 7. Expiry log + phone alerts
 8. State backup to `data/state.json` (restart restores the game paused), URL printout, QR code to admin
 
-Unscheduled ideas: manual +/- oxygen per miner, single-miner events (e.g. leak), time-at-zero per miner and CSV export of the log, projector mode with team colors, mute button.
+Unscheduled ideas: manual +/- oxygen per miner, single-miner events (e.g. leak), time-at-zero per miner and CSV export of the log, projector mode with team colors.
 
 ## Notes for working here
 
