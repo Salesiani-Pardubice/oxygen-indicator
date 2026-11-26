@@ -18,3 +18,13 @@ Operátor nemusí doplnit kyslík naplno.
 Kyslík může doplňovat vždy jen jeden operátor - jeden PC.
 
 Navrhni případně i další zlepšení.
+
+## Spuštění
+
+Je potřeba Node.js 20 nebo novější (`node --version`). Aplikace nemá žádné závislosti, není třeba `npm install`.
+
+```
+npm start
+```
+
+Server vypíše adresy displeje a administrace, např. `http://192.168.0.153:3000/` a `/admin`. Port jde změnit proměnnou `PORT` (`PORT=8080 npm start`). Testy se spouštějí příkazem `npm test`.
