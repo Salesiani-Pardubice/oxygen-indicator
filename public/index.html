@@ -10,10 +10,20 @@
   <body class="display">
     <header class="display-header">
       <h1>Kyslíkový indikátor</h1>
+      <p id="hint" class="hint" hidden>Klikni na horníka, kterému chceš doplnit kyslík.</p>
       <div id="status" class="status" hidden>Spojení se serverem přerušeno</div>
     </header>
     <div id="banner" class="banner" hidden>HRA JE POZASTAVENA</div>
     <main id="gauges" class="gauges"></main>
+    <section id="pump" class="pump" hidden>
+      <div class="pump-info">
+        Doplňuješ: <strong id="pump-name"></strong> <span id="pump-level"></span>
+        <small>Po 10 s bez kliknutí se doplňování ukončí.</small>
+      </div>
+      <button id="pump-button" class="pump-button" type="button">KLIKEJ!</button>
+      <button id="pump-done" class="pump-done" type="button">Hotovo</button>
+    </section>
+    <div id="toast" class="toast" hidden></div>
     <script type="module" src="/js/display.js"></script>
   </body>
 </html>

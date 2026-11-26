@@ -6,6 +6,7 @@ body.display {
 }
 
 .display-header {
+  gap: 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -129,4 +130,82 @@ body.display {
 .gauge-mode {
   color: var(--muted);
   font-size: 1.1rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+}
+
+.gauges.refillable .gauge {
+  cursor: pointer;
+}
+
+.gauge.refilling {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(63, 193, 201, 0.35);
+}
+
+.pump {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: var(--panel);
+  border-top: 3px solid var(--accent);
+}
+
+.pump-info {
+  flex: 1;
+  font-size: 1.5rem;
+}
+
+.pump-info small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.pump-button {
+  flex: 2;
+  padding: 1.5rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--accent);
+  color: #06262a;
+  font-size: 2.5rem;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pump-button:active {
+  transform: scale(0.97);
+  filter: brightness(1.2);
+}
+
+.pump-done {
+  padding: 1rem 1.5rem;
+  border: 2px solid var(--muted);
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--fg);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 1.25rem;
+  font-weight: 600;
 }

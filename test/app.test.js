@@ -7,6 +7,13 @@ import { createSseHub } from '../server/sse.js';
 let server;
 let baseUrl;
 
+const post = (path, body) =>
+  fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
 before(async () => {
   server = createApp({ game: createGame(), publicHub: createSseHub() });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -72,4 +79,30 @@ test('streams the game snapshot over SSE', async () => {
   const snapshot = JSON.parse(text.split('data: ')[1]);
   assert.equal(snapshot.miners.length, 4);
   assert.equal(snapshot.paused, false);
+});
+
+test('the local PC may refill; clicks add oxygen and the lock blocks others', async () => {
+  assert.deepEqual(await (await fetch(`${baseUrl}/api/session`)).json(), { canRefill: true });
+
+  const start = await post('/api/refill/start', { minerId: 1, clientId: 'pc-1' });
+  assert.equal(start.status, 200);
+
+  const busy = await post('/api/refill/start', { minerId: 2, clientId: 'pc-2' });
+  assert.equal(busy.status, 409);
+
+  const click = await post('/api/refill/click', { clientId: 'pc-1' });
+  assert.equal(click.status, 200);
+  assert.equal((await click.json()).ok, true);
+
+  const stop = await post('/api/refill/stop', { clientId: 'pc-1' });
+  assert.equal(stop.status, 200);
+});
+
+test('refill requests are validated', async () => {
+  assert.equal((await post('/api/refill/start', { minerId: 1 })).status, 400);
+  assert.equal((await post('/api/refill/start', { minerId: 99, clientId: 'x' })).status, 404);
+  assert.equal((await post('/api/refill/click', { clientId: 'nobody' })).status, 409);
+
+  const broken = await fetch(`${baseUrl}/api/refill/click`, { method: 'POST', body: '{nope' });
+  assert.equal(broken.status, 400);
 });
