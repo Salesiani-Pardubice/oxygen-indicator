@@ -261,3 +261,80 @@ button.danger-outline {
   border-color: var(--critical);
   color: var(--critical);
 }
+
+.alert {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--critical);
+  color: #fff;
+  font-weight: 700;
+}
+
+.alert span {
+  flex: 1;
+}
+
+.alert button {
+  border-color: #fff;
+  color: #fff;
+}
+
+.sound-button.attention {
+  border-color: var(--low);
+  color: var(--low);
+  animation: attention 1.2s ease-in-out infinite;
+}
+
+@keyframes attention {
+  50% {
+    background: rgba(245, 165, 36, 0.25);
+  }
+}
+
+#enable-alerts {
+  width: 100%;
+}
+
+.log {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.log.empty::before {
+  content: 'Zatím nikomu kyslík nedošel.';
+  color: var(--muted);
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  background: #0f151c;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-time {
+  color: var(--muted);
+}
+
+.log-name {
+  font-weight: 700;
+}
+
+.log-row[data-open='true'] .log-zero {
+  color: var(--critical);
+  font-weight: 700;
+}
+
+.log-row[data-open='false'] .log-zero {
+  color: var(--muted);
+}

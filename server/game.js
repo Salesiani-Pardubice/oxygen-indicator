@@ -18,6 +18,7 @@ const SPEED_RANGE = { min: 0.25, max: 5 };
 const PRESET_SECONDS_RANGE = { min: 10, max: 1800 };
 const REFILL_PER_CLICK_RANGE = { min: 0.1, max: 10 };
 const MAX_NAME_LENGTH = 20;
+const MAX_LOG_ENTRIES = 500;
 
 const roundOxygen = (value) => Math.round(value * 100) / 100;
 const invalid = (message) => ({ ok: false, error: 'invalid', message });
@@ -30,6 +31,7 @@ const inRange = (value, { min, max }) =>
  */
 export function createGame({
   clock = () => performance.now(),
+  wallClock = () => Date.now(),
   minerCount = MIN_MINERS,
   startPaused = true,
   eventDefs = [],
@@ -46,11 +48,38 @@ export function createGame({
     // Running special events: { id, defId, label, multiplier, targets: 'all' | [minerId], remainingMs | null }.
     events: [],
     nextEventId: 1,
+    // Who ran out of oxygen and when: { id, minerId, minerName, expiredAt, recoveredAt | null } (epoch ms).
+    log: [],
+    nextLogId: 1,
     miners: Array.from({ length: minerCount }, (_, index) => createMiner(index + 1)),
   };
 
   function createMiner(id) {
     return { id, name: `Horník ${id}`, oxygen: FULL_OXYGEN, preset: 'standard' };
+  }
+
+  const openLogEntry = (minerId) =>
+    state.log.find((entry) => entry.minerId === minerId && entry.recoveredAt === null);
+
+  /** Logs every miner who has just hit zero. A miner stays "open" in the log until refilled. */
+  function recordExpiries() {
+    for (const miner of state.miners) {
+      if (miner.oxygen > 0 || openLogEntry(miner.id)) continue;
+      state.log.push({
+        id: state.nextLogId++,
+        minerId: miner.id,
+        minerName: miner.name,
+        expiredAt: wallClock(),
+        recoveredAt: null,
+      });
+    }
+    if (state.log.length > MAX_LOG_ENTRIES) state.log.splice(0, state.log.length - MAX_LOG_ENTRIES);
+  }
+
+  function closeLogEntries(shouldClose = () => true) {
+    for (const entry of state.log) {
+      if (entry.recoveredAt === null && shouldClose(entry)) entry.recoveredAt = wallClock();
+    }
   }
 
   /** Product of the multipliers of all running events that affect this miner. */
@@ -84,6 +113,7 @@ export function createGame({
       for (const miner of state.miners) {
         miner.oxygen = Math.max(0, miner.oxygen - ratePerSecond(miner) * step);
       }
+      recordExpiries();
       for (const event of timed) event.remainingMs -= step * 1000;
       state.events = state.events.filter((event) => event.remainingMs === null || event.remainingMs > 0.5);
       left -= step;
@@ -125,6 +155,7 @@ export function createGame({
     lock.lastClick = now;
     lock.lastActivity = now;
     miner.oxygen = Math.min(FULL_OXYGEN, miner.oxygen + state.refillPerClick);
+    closeLogEntries((entry) => entry.minerId === miner.id);
 
     const done = miner.oxygen >= FULL_OXYGEN;
     if (done) state.refill = null;
@@ -158,6 +189,7 @@ export function createGame({
     while (state.miners.length < count) state.miners.push(createMiner(state.miners.length + 1));
     state.miners.length = count;
     if (state.refill && state.refill.minerId > count) state.refill = null;
+    closeLogEntries((entry) => entry.minerId > count);
     // Events aimed only at removed miners have nobody left to affect.
     for (const event of state.events) {
       if (event.targets !== 'all') event.targets = event.targets.filter((id) => id <= count);
@@ -254,7 +286,14 @@ export function createGame({
     state.paused = true;
     state.refill = null;
     state.events = [];
+    closeLogEntries();
     lastTick = clock();
+    return { ok: true };
+  }
+
+  function clearLog() {
+    // Miners who are out of oxygen right now stay listed, so their expiry isn't lost.
+    state.log = state.log.filter((entry) => entry.recoveredAt === null);
     return { ok: true };
   }
 
@@ -292,6 +331,11 @@ export function createGame({
         maxMiners: MAX_MINERS,
       },
       eventDefs,
+      now: wallClock(),
+      log: state.log.map((entry) => ({
+        ...entry,
+        zeroSeconds: Math.round(((entry.recoveredAt ?? wallClock()) - entry.expiredAt) / 1000),
+      })),
     };
   }
 
@@ -311,6 +355,7 @@ export function createGame({
     setRefillPerClick,
     startEvent,
     endEvent,
+    clearLog,
     resetGame,
   };
 }

@@ -14,5 +14,6 @@ export const adminCommands = {
       targets: body.targets,
     }),
   endEvent: (game, body) => game.endEvent(body.id),
+  clearLog: (game) => game.clearLog(),
   resetGame: (game) => game.resetGame(),
 };

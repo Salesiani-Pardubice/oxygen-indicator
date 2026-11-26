@@ -10,7 +10,7 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 
 ## Project status
 
-Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Done so far: project skeleton, game core + display with live gauges, click-to-refill, audio alarm, admin (PIN, pause/speed, miners, presets), special events. Log/alerts and persistence are still to come.
+Early implementation. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it. Features are being added one PR at a time (see the planned order below). Done so far: project skeleton, game core + display with live gauges, click-to-refill, audio alarm, admin (PIN, pause/speed, miners, presets), special events, expiry log + phone alerts. Persistence is still to come.
 
 ## Commands
 
@@ -30,7 +30,9 @@ Early implementation. `README.md` is the original design brief (in Czech); this 
 - Refill API (`/api/refill/start|click|stop`, `/api/session`): `server/local.js` restricts it to requests coming from the server PC itself (loopback or one of its own interface addresses), so phones in the hotspot cannot refill. The lock owner is a per-tab `clientId` generated in `public/js/api.js`.
 - Admin: `server/auth.js` (PIN → HMAC-derived session cookie, stateless so it survives restarts; 5 wrong PINs lock an address for 30 s), `server/admin-commands.js` (command type → game method; commands are validated inside `game.js` and return `{ ok }` / `{ ok: false, error, message }`). API: `POST /api/admin/login|logout|command`, `GET /api/admin/session|events`. The admin SSE stream carries `game.adminSnapshot()` (snapshot + settings). The game starts **paused**; the admin starts it.
 - Events: definitions live in `config/events.json` (`id`, `label`, `multiplier`, `durationSec` or `null` = until ended), validated at startup by `server/events-config.js` (the server refuses to start on a bad file). Running events are game state: `startEvent(defId, { durationSec, targets })` (durationSec `undefined` = definition default, `null` = until ended; targets `'all'` or miner ids) and `endEvent(id)`. Overlapping events multiply. `advance()` in `game.js` splits time at event ends, so results don't depend on tick frequency, and event timers freeze while the game is paused. Snapshots carry `events` and a per-miner `boost`.
-- Admin client: `public/js/admin.js` (+ `ui.js` segmented buttons/toast, `admin-events.js` for the events card). It updates DOM in place and never overwrites an input that has focus.
+- Expiry log (game state, `state.log`, admin snapshot only): when a miner's oxygen hits 0 an entry `{ id, minerId, minerName, expiredAt, recoveredAt }` is added once; it stays open until that miner is refilled (or on reset / miner removed). `zeroSeconds` is computed per snapshot. `resetGame` keeps the log; `clearLog` keeps still-open entries. The game takes an injectable `wallClock` (epoch ms) next to the monotonic `clock`.
+- Phone alerts: the admin page compares log ids with the last seen one (not on the first snapshot, so reloading doesn't alert for old expiries) and then beeps, vibrates and shows a banner (`admin-alerts.js`). Sound needs a user gesture (shared `bindSoundToggle` in `ui.js`, also used by the display); wake lock only works on secure origins, so over the plain-HTTP hotspot the phone has to be kept awake by hand.
+- Admin client: `public/js/admin.js` (+ `ui.js` segmented buttons/toast, `admin-events.js`, `admin-log.js`, `admin-alerts.js` for the cards; `log.js` has the pure log helpers). It updates DOM in place and never overwrites an input that has focus.
 - `server/app.js` — HTTP routing and static serving; `server/sse.js` — SSE hub; `server/http-utils.js` — response helpers; `server/index.js` — wiring and the 250 ms tick/broadcast loop; `server/network.js` — LAN address discovery.
 - `public/js/display.js` renders snapshots into gauges (DOM updated in place so CSS transitions work); `levels.js` (ok/low/critical/empty thresholds) and `format.js` (time formatting, Czech preset labels) are shared helpers.
 - Alarm: `public/js/alarm-pattern.js` (pure: state → off/beep/siren; follows the most endangered miner, pitch differs per miner), `alarm.js` (loop scheduling with injected `playTone`), `audio.js` (Web Audio output + persisted mute). Audio only starts after a user gesture, so the display has a "Zapnout zvuk" button and the first click anywhere also unlocks it.
@@ -68,10 +70,10 @@ Depletion per second = `100 / preset_duration_s × global_multiplier × event_mu
 4. Audio alarm on the display (done; includes a mute button)
 5. Admin: PIN, names, number of miners, pause, speed, presets (done)
 6. Special events with countdown (done)
-7. Expiry log + phone alerts
+7. Expiry log + phone alerts (done)
 8. State backup to `data/state.json` (restart restores the game paused), URL printout, QR code to admin
 
-Unscheduled ideas: manual +/- oxygen per miner, sound on event start, time-at-zero per miner and CSV export of the log, projector mode with team colors.
+Unscheduled ideas: manual +/- oxygen per miner, sound on event start, CSV export of the log, projector mode with team colors.
 
 ## Notes for working here
 

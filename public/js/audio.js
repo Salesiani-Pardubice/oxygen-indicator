@@ -1,8 +1,6 @@
-const MUTED_KEY = 'oxygen-muted';
-
-function readMuted() {
+function readMuted(key) {
   try {
-    return localStorage.getItem(MUTED_KEY) === '1';
+    return localStorage.getItem(key) === '1';
   } catch {
     return false;
   }
@@ -12,9 +10,9 @@ function readMuted() {
  * Web Audio tone output. Browsers only allow sound after a user gesture, so nothing is
  * played until enable() has been called from one.
  */
-export function createTonePlayer() {
+export function createTonePlayer({ storageKey = 'oxygen-muted' } = {}) {
   let context = null;
-  let muted = readMuted();
+  let muted = readMuted(storageKey);
 
   function enable() {
     if (!context) context = new AudioContext();
@@ -45,7 +43,7 @@ export function createTonePlayer() {
   function setMuted(value) {
     muted = value;
     try {
-      localStorage.setItem(MUTED_KEY, value ? '1' : '0');
+      localStorage.setItem(storageKey, value ? '1' : '0');
     } catch {
       // the preference just won't survive a reload
     }

@@ -4,6 +4,7 @@ import { getClientId, postJson } from './api.js';
 import { alarmPattern } from './alarm-pattern.js';
 import { createAlarm } from './alarm.js';
 import { createTonePlayer } from './audio.js';
+import { bindSoundToggle } from './ui.js';
 
 const gaugesEl = document.querySelector('#gauges');
 const statusEl = document.querySelector('#status');
@@ -199,29 +200,11 @@ pumpButton.addEventListener('pointerdown', (event) => {
 });
 pumpDone.addEventListener('click', finishRefill);
 
-function renderSoundButton() {
-  soundButton.classList.toggle('attention', !tones.enabled);
-  if (!tones.enabled) soundButton.textContent = '🔈 Zapnout zvuk';
-  else soundButton.textContent = tones.muted ? '🔇 Zvuk ztlumen' : '🔊 Zvuk zapnut';
-}
-
-soundButton.addEventListener('click', () => {
-  if (!tones.enabled) {
-    tones.enable();
-    tones.playTone(880, 200); // confirms that the speakers work
-  } else {
-    tones.setMuted(!tones.muted);
-  }
-  renderSoundButton();
+bindSoundToggle({
+  button: soundButton,
+  tones,
+  labels: { off: '🔈 Zapnout zvuk', on: '🔊 Zvuk zapnut', muted: '🔇 Zvuk ztlumen' },
 });
-
-// Any first click on the page also unlocks audio, in case nobody pressed the sound button.
-document.addEventListener('pointerdown', (event) => {
-  if (tones.enabled || event.target.closest('#sound')) return;
-  tones.enable();
-  renderSoundButton();
-});
-renderSoundButton();
 
 function setConnected(connected) {
   statusEl.hidden = connected;

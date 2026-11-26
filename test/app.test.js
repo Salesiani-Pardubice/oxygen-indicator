@@ -212,3 +212,8 @@ test('the admin can start and end events', async () => {
   await adminPost(cookie, { type: 'resetGame' });
   await adminPost(cookie, { type: 'setPaused', paused: false });
 });
+
+test('the admin can clear the log', async () => {
+  const { cookie } = await adminLogin();
+  assert.equal((await adminPost(cookie, { type: 'clearLog' })).status, 200);
+});

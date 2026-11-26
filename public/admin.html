@@ -23,7 +23,18 @@
       </form>
     </section>
 
+    <section id="alert" class="alert" role="alert" hidden>
+      <span id="alert-text"></span>
+      <button id="alert-dismiss" type="button">Rozumím</button>
+    </section>
+
     <main id="panel" hidden>
+      <section class="card">
+        <h2>Upozornění na telefonu</h2>
+        <button id="enable-alerts" class="sound-button" type="button"></button>
+        <p class="hint">Když kyslík někomu dojde, telefon zapípá a zavibruje. Nechte telefon odemčený a tuto stránku otevřenou.</p>
+      </section>
+
       <section class="card">
         <h2>Hra</h2>
         <p id="game-state" class="game-state"></p>
@@ -60,6 +71,12 @@
         <h3>Režim všem</h3>
         <div id="all-presets" class="segmented"></div>
         <div id="miners" class="miners"></div>
+      </section>
+
+      <section class="card">
+        <h2>Log vypršení kyslíku</h2>
+        <div id="log" class="log"></div>
+        <button id="clear-log" class="danger" type="button">Smazat log</button>
       </section>
 
       <details class="card">

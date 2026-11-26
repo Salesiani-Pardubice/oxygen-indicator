@@ -4,7 +4,12 @@ import { createGame } from '../server/game.js';
 
 function createTestGame(options) {
   let now = 0;
-  const game = createGame({ clock: () => now, startPaused: false, ...options });
+  const game = createGame({
+    clock: () => now,
+    wallClock: () => 1_000_000 + now,
+    startPaused: false,
+    ...options,
+  });
   const advance = (seconds) => {
     now += seconds * 1000;
     game.tick();
@@ -361,4 +366,92 @@ test('resetGame ends all events', () => {
 test('the admin snapshot lists the event definitions', () => {
   const { game } = eventGame();
   assert.equal(game.adminSnapshot().eventDefs.length, 3);
+});
+
+test('a miner running out of oxygen is logged once, with the time', () => {
+  const { game, advance } = createTestGame();
+  advance(119);
+  assert.equal(game.adminSnapshot().log.length, 0);
+  advance(2);
+  advance(60); // stays at zero, must not be logged again
+  const { log } = game.adminSnapshot();
+  assert.equal(log.length, 4);
+  assert.deepEqual(
+    log.map((entry) => entry.minerId),
+    [1, 2, 3, 4],
+  );
+  assert.equal(log[0].minerName, 'Horník 1');
+  assert.equal(log[0].recoveredAt, null);
+  assert.ok(log[0].expiredAt >= 1_000_000 + 119_000 && log[0].expiredAt <= 1_000_000 + 121_000);
+});
+
+test('the log keeps the name the miner had when oxygen ran out', () => {
+  const { game, advance } = createTestGame();
+  game.renameMiner(1, 'Karel');
+  advance(200);
+  game.renameMiner(1, 'Jana');
+  assert.equal(game.adminSnapshot().log[0].minerName, 'Karel');
+});
+
+test('refilling closes the entry and reports the time spent at zero', () => {
+  const { game, advance } = createTestGame();
+  advance(120);
+  advance(30); // 30 s at zero
+  game.startRefill(2, 'a');
+  advance(0.1);
+  game.refillClick('a');
+  const entry = game.adminSnapshot().log.find((candidate) => candidate.minerId === 2);
+  assert.notEqual(entry.recoveredAt, null);
+  assert.ok(entry.zeroSeconds >= 29 && entry.zeroSeconds <= 31);
+  // the others are still at zero and still open
+  assert.equal(game.adminSnapshot().log.filter((candidate) => candidate.recoveredAt === null).length, 3);
+});
+
+test('running out of oxygen again after a refill creates a new entry', () => {
+  const { game, advance } = createTestGame();
+  advance(120);
+  game.startRefill(1, 'a');
+  advance(0.1);
+  game.refillClick('a');
+  advance(120);
+  assert.equal(game.adminSnapshot().log.filter((entry) => entry.minerId === 1).length, 2);
+});
+
+test('nothing is logged while paused', () => {
+  const { game, advance } = createTestGame({ startPaused: true });
+  advance(500);
+  assert.equal(game.adminSnapshot().log.length, 0);
+});
+
+test('clearLog removes finished entries but keeps miners who are still at zero', () => {
+  const { game, advance } = createTestGame();
+  advance(120);
+  game.startRefill(1, 'a');
+  advance(0.1);
+  game.refillClick('a');
+  game.clearLog();
+  const { log } = game.adminSnapshot();
+  assert.deepEqual(
+    log.map((entry) => entry.minerId),
+    [2, 3, 4],
+  );
+});
+
+test('resetGame closes open entries but keeps the log', () => {
+  const { game, advance } = createTestGame();
+  advance(120);
+  game.resetGame();
+  const { log } = game.adminSnapshot();
+  assert.equal(log.length, 4);
+  assert.ok(log.every((entry) => entry.recoveredAt !== null));
+});
+
+test('the log is capped', () => {
+  const { game, advance } = createTestGame();
+  for (let i = 0; i < 160; i++) {
+    advance(120);
+    game.resetGame();
+    game.setPaused(false);
+  }
+  assert.equal(game.adminSnapshot().log.length, 500);
 });

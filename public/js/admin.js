@@ -3,6 +3,10 @@ import { PRESET_LABELS } from './format.js';
 import { postJson } from './api.js';
 import { createSegmented, createToast } from './ui.js';
 import { createEventsPanel } from './admin-events.js';
+import { createLogPanel } from './admin-log.js';
+import { createAlerts } from './admin-alerts.js';
+import { createTonePlayer } from './audio.js';
+import { latestLogId, newExpiries } from './log.js';
 
 const $ = (selector) => document.querySelector(selector);
 const loginEl = $('#login');
@@ -61,6 +65,9 @@ logoutEl.addEventListener('click', async () => {
 });
 
 const eventsPanel = createEventsPanel({ command });
+const logPanel = createLogPanel({ command });
+const alerts = createAlerts({ tones: createTonePlayer({ storageKey: 'oxygen-admin-muted' }) });
+let lastSeenLogId = null; // set from the first snapshot, so old expiries don't trigger alerts
 
 // --- game controls -----------------------------------------------------------------------
 
@@ -184,6 +191,17 @@ function render(next) {
   renderMiners(next.miners);
   renderSettings(next.settings);
   eventsPanel.render(next);
+  logPanel.render(next.log);
+
+  if (lastSeenLogId === null) {
+    lastSeenLogId = latestLogId(next.log);
+  } else {
+    const fresh = newExpiries(next.log, lastSeenLogId);
+    if (fresh.length > 0) {
+      lastSeenLogId = latestLogId(next.log);
+      alerts.notify(fresh);
+    }
+  }
 }
 
 // --- startup -----------------------------------------------------------------------------
