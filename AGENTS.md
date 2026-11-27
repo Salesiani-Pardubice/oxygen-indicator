@@ -4,13 +4,14 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 
 ## Working rules
 
+- **Contributing:** `CONTRIBUTING.md` is the source for the contribution rules; keep it and these working rules consistent.
 - **Language:** communicate with the user in Czech. Write all code (identifiers, comments, commit messages, PR text) in English. All website content (UI labels, texts, miner names, admin UI) is in Czech.
 - **One feature = one PR:** every new feature goes on its own branch and in its own pull request. Do not bundle unrelated features.
 - **The user checks every feature:** after implementing a feature, stop and let the user try it and review it before moving on. Do not start the next feature or merge a PR until the user has confirmed the current one.
 
 ## Project status
 
-Feature-complete according to the original plan (all planned features are implemented and merged, one PR each); only the unscheduled ideas at the end remain. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it.
+Feature-complete according to the original plan (all planned features are implemented and merged, one PR each); only the unscheduled ideas at the end remain. `README.md` is the user-facing guide (Czech; setup, how to play, admin, troubleshooting, with screenshots); `CONTRIBUTING.md` has the contribution rules; the original design brief is kept in `docs/puvodni-zadani.md`. This file records the architecture and the decisions made on top of the brief.
 
 ## Commands
 
@@ -18,6 +19,7 @@ Feature-complete according to the original plan (all planned features are implem
 - `ADMIN_PIN=1234 npm start` — fixed admin PIN; without it a random 4-digit PIN is generated and printed in the console on every start.
 - `STATE_FILE=/path/state.json npm start` — where the game is saved (default `data/state.json`).
 - `ALLOW_REMOTE_REFILL=1 npm start` — dev switch that lets devices other than the server PC refill oxygen (by default only the PC running the server can, see below).
+- `npm run screenshots` — regenerates `docs/screenshots/*.png` for the README (`scripts/screenshots.mjs`: starts the server with a prepared mid-game state and drives headless Chrome over CDP; needs Node 22+ and Chrome, `CHROME_PATH` to override). Run it whenever the display or admin look changes.
 - `npm test` — run all tests (`node:test`, no extra dependencies).
 - Run a single test file: `node --test test/app.test.js`; filter by name: `node --test --test-name-pattern="health"`.
 - Requires Node.js 20 or newer (the target PC has 20/22/24, exact version unknown).
@@ -46,7 +48,7 @@ Feature-complete according to the original plan (all planned features are implem
 
 A game UI for a mining-themed social game at a weekend camp for 8th–9th graders. Players are split into roles; two of them are a **miner** (works in a toxic environment and needs a constant oxygen supply) and an **operator** (monitors the miner's oxygen and refills it). The number of miners/teams is **configurable in the admin, from 4 to 6** (default 4). The app simulates how much oxygen each miner has left.
 
-## Intended architecture (from the README)
+## Intended architecture (from the original brief)
 
 - **Offline-capable web page** served by a simple **Node.js server** running on a PC. The page must run on any OS and not need internet once downloaded/installed ahead of time.
 - The PC acts as a **Wi-Fi hotspot**. The main display shows **4–6 oxygen gauges** (one per miner) and **plays alarm sounds** when any gauge runs low.
