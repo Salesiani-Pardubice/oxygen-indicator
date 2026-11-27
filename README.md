@@ -18,3 +18,17 @@ Operátor nemusí doplnit kyslík naplno.
 Kyslík může doplňovat vždy jen jeden operátor - jeden PC.
 
 Navrhni případně i další zlepšení.
+
+## Spuštění
+
+Je potřeba Node.js 20 nebo novější (`node --version`). Aplikace nemá žádné závislosti, není třeba `npm install`.
+
+```
+npm start
+```
+
+Server vypíše adresy displeje a administrace, např. `http://192.168.0.153:3000/` a `/admin`, a také PIN do administrace. PIN se při každém startu vygeneruje náhodně, pevný jde nastavit proměnnou `ADMIN_PIN` (`ADMIN_PIN=1234 npm start`). Port jde změnit proměnnou `PORT` (`PORT=8080 npm start`). Hra po startu čeká pozastavená, spouští se v administraci. Testy se spouštějí příkazem `npm test`.
+
+Speciální události (např. prasklá bomba) se definují v souboru `config/events.json`: název, násobič spotřeby a výchozí trvání v sekundách (`null` = do ručního ukončení). Při spuštění události v administraci lze trvání i dotčené horníky změnit.
+
+Rozehraná hra se průběžně ukládá do `data/state.json` (jiné místo: proměnná `STATE_FILE`). Po restartu serveru se hra obnoví **pozastavená**; zcela novou hru začnete tlačítkem „Nová hra“ v administraci, případně smazáním souboru `data/state.json` při vypnutém serveru. Na displeji na počítači s serverem je tlačítko „Připojení“, které ukáže adresy pro mobil.

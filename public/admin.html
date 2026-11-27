@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Administrace – Kyslíkový indikátor</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+  </head>
+  <body class="admin">
+    <header class="admin-header">
+      <h1>Administrace</h1>
+      <span id="status" class="status" hidden>Bez spojení</span>
+      <button id="logout" class="link-button" type="button" hidden>Odhlásit</button>
+    </header>
+
+    <section id="login" class="card" hidden>
+      <form id="login-form">
+        <label for="pin">PIN (je vypsaný v konzoli serveru)</label>
+        <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off" required />
+        <button type="submit" class="primary">Přihlásit</button>
+        <p id="login-error" class="error" hidden></p>
+      </form>
+    </section>
+
+    <section id="alert" class="alert" role="alert" hidden>
+      <span id="alert-text"></span>
+      <button id="alert-dismiss" type="button">Rozumím</button>
+    </section>
+
+    <main id="panel" hidden>
+      <section class="card">
+        <h2>Upozornění na telefonu</h2>
+        <button id="enable-alerts" class="sound-button" type="button"></button>
+        <p class="hint">Když kyslík někomu dojde, telefon zapípá a zavibruje. Nechte telefon odemčený a tuto stránku otevřenou.</p>
+      </section>
+
+      <section class="card">
+        <h2>Hra</h2>
+        <p id="game-state" class="game-state"></p>
+        <button id="toggle-pause" class="primary big" type="button"></button>
+        <button id="reset" class="danger" type="button">Nová hra (doplnit všem a pozastavit)</button>
+      </section>
+
+      <section class="card">
+        <h2>Rychlost spotřeby</h2>
+        <div id="speed" class="segmented"></div>
+      </section>
+
+      <section class="card">
+        <h2>Události</h2>
+        <div id="active-events" class="active-events"></div>
+        <h3>Spustit událost</h3>
+        <div id="event-defs" class="segmented wrap"></div>
+        <p id="event-hint" class="hint"></p>
+        <h3>Trvání</h3>
+        <div id="event-duration" class="segmented"></div>
+        <label id="event-custom" class="inline-field" hidden>
+          Vlastní trvání (s)
+          <input id="event-custom-seconds" type="number" min="5" max="3600" step="5" value="60" />
+        </label>
+        <h3>Koho se týká</h3>
+        <div id="event-targets" class="segmented wrap"></div>
+        <button id="event-start" class="primary big" type="button">Spustit událost</button>
+      </section>
+
+      <section class="card">
+        <h2>Horníci</h2>
+        <h3>Počet horníků</h3>
+        <div id="miner-count" class="segmented"></div>
+        <h3>Režim všem</h3>
+        <div id="all-presets" class="segmented"></div>
+        <div id="miners" class="miners"></div>
+      </section>
+
+      <section class="card">
+        <h2>Log vypršení kyslíku</h2>
+        <div id="log" class="log"></div>
+        <button id="clear-log" class="danger" type="button">Smazat log</button>
+      </section>
+
+      <details class="card">
+        <summary>Nastavení</summary>
+        <h3>Jak dlouho vydrží plná maska (s)</h3>
+        <div class="field-grid">
+          <label>Spánek <input id="seconds-sleep" type="number" min="10" max="1800" step="5" /></label>
+          <label>Normál <input id="seconds-standard" type="number" min="10" max="1800" step="5" /></label>
+          <label>Práce <input id="seconds-work" type="number" min="10" max="1800" step="5" /></label>
+        </div>
+        <h3>Doplnění jedním kliknutím (%)</h3>
+        <div class="field-grid">
+          <label>Kyslík na klik <input id="refill-per-click" type="number" min="0.1" max="10" step="0.1" /></label>
+        </div>
+      </details>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="/js/admin.js"></script>
+  </body>
+</html>

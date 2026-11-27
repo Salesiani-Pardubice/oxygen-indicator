@@ -1,0 +1,14 @@
+{
+  "name": "oxygen-indicator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Oxygen level display and admin for a mining camp game",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test"
+  }
+}

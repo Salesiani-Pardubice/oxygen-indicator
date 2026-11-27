@@ -1,0 +1,6 @@
+[
+  { "id": "bomb", "label": "Prasklá bomba", "multiplier": 2, "durationSec": 60 },
+  { "id": "leak", "label": "Únik kyslíku", "multiplier": 3, "durationSec": 30 },
+  { "id": "ventilation", "label": "Zapnutá ventilace", "multiplier": 0.5, "durationSec": 90 },
+  { "id": "collapse", "label": "Zával", "multiplier": 1.5, "durationSec": null }
+]
