@@ -5,6 +5,7 @@ import { alarmPattern } from './alarm-pattern.js';
 import { createAlarm } from './alarm.js';
 import { createTonePlayer } from './audio.js';
 import { bindSoundToggle } from './ui.js';
+import { setupConnectDialog } from './connect.js';
 
 const gaugesEl = document.querySelector('#gauges');
 const statusEl = document.querySelector('#status');
@@ -217,6 +218,7 @@ async function init() {
     canRefill = false;
   }
   hintEl.hidden = !canRefill;
+  setupConnectDialog({ enabled: canRefill });
   if (lastSnapshot) render(lastSnapshot);
 
   const events = new EventSource('/api/events');

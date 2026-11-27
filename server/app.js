@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { HttpError, readJson, send, sendJson } from './http-utils.js';
 import { adminCommands } from './admin-commands.js';
 import { isLocalRequest } from './local.js';
+import { lanAddresses as detectLanAddresses } from './network.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));
 
@@ -52,7 +53,14 @@ const ERROR_STATUS = {
   'unknown-event': 404,
 };
 
-export function createApp({ game, publicHub, adminHub, auth, allowRemoteRefill = false }) {
+export function createApp({
+  game,
+  publicHub,
+  adminHub,
+  auth,
+  allowRemoteRefill = false,
+  lanAddresses = detectLanAddresses,
+}) {
   const canRefill = (req) => allowRemoteRefill || isLocalRequest(req);
   const publish = () => {
     publicHub.broadcast(game.snapshot());
@@ -84,6 +92,11 @@ export function createApp({ game, publicHub, adminHub, auth, allowRemoteRefill =
   const routes = {
     'GET /api/health': (req, res) => sendJson(res, 200, { ok: true }),
     'GET /api/events': (req, res) => publicHub.connect(req, res, game.snapshot()),
+    // Where phones in the hotspot can reach this server, for the "connect" dialog on the display.
+    'GET /api/info': (req, res) => {
+      const base = lanAddresses().map((address) => `http://${address}:${req.socket.localPort}`);
+      sendJson(res, 200, { displayUrls: base.map((url) => `${url}/`), adminUrls: base.map((url) => `${url}/admin`) });
+    },
     'GET /api/session': (req, res) => sendJson(res, 200, { canRefill: canRefill(req) }),
     'POST /api/refill/start': async (req, res) => {
       const body = await refillBody(req);

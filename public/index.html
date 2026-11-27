@@ -12,6 +12,7 @@
       <h1>Kyslíkový indikátor</h1>
       <p id="hint" class="hint" hidden>Klikni na horníka, kterému chceš doplnit kyslík.</p>
       <span id="speed" class="speed" hidden></span>
+      <button id="connect-button" class="sound-button" type="button" hidden>📱 Připojení</button>
       <button id="sound" class="sound-button" type="button"></button>
       <div id="status" class="status" hidden>Spojení se serverem přerušeno</div>
     </header>
@@ -26,6 +27,18 @@
       <button id="pump-button" class="pump-button" type="button">KLIKEJ!</button>
       <button id="pump-done" class="pump-done" type="button">Hotovo</button>
     </section>
+    <div id="connect" class="modal" hidden>
+      <div class="modal-box">
+        <h2>Připojení z mobilu</h2>
+        <p>Mobil musí být ve stejné Wi-Fi jako tento počítač.</p>
+        <h3>Administrace</h3>
+        <ul id="connect-admin"></ul>
+        <h3>Displej</h3>
+        <ul id="connect-display"></ul>
+        <p class="hint">PIN do administrace je vypsaný v okně, kde běží server.</p>
+        <button id="connect-close" class="pump-done" type="button">Zavřít</button>
+      </div>
+    </div>
     <div id="toast" class="toast" hidden></div>
     <script type="module" src="/js/display.js"></script>
   </body>

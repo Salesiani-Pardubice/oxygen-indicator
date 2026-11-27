@@ -1,4 +1,5 @@
 import { EVENT_DURATION_RANGE } from './events-config.js';
+import { parseSavedState } from './saved-state.js';
 
 export const FULL_OXYGEN = 100;
 export const MIN_MINERS = 4;
@@ -35,6 +36,7 @@ export function createGame({
   minerCount = MIN_MINERS,
   startPaused = true,
   eventDefs = [],
+  restore = null,
 } = {}) {
   let lastTick = clock();
 
@@ -53,6 +55,24 @@ export function createGame({
     nextLogId: 1,
     miners: Array.from({ length: minerCount }, (_, index) => createMiner(index + 1)),
   };
+
+  // A saved game comes back paused, with nobody holding the refill lock.
+  if (restore) {
+    Object.assign(
+      state,
+      parseSavedState(restore, {
+        speed: SPEED_RANGE,
+        refillPerClick: REFILL_PER_CLICK_RANGE,
+        presetSeconds: PRESET_SECONDS_RANGE,
+        presetKeys: PRESET_KEYS,
+        minMiners: MIN_MINERS,
+        maxMiners: MAX_MINERS,
+        maxNameLength: MAX_NAME_LENGTH,
+        fullOxygen: FULL_OXYGEN,
+      }),
+      { paused: true },
+    );
+  }
 
   function createMiner(id) {
     return { id, name: `Horník ${id}`, oxygen: FULL_OXYGEN, preset: 'standard' };
@@ -320,6 +340,24 @@ export function createGame({
     };
   }
 
+  /** The part of the state that survives a restart (see parseSavedState for the reverse). */
+  function serialize() {
+    return {
+      version: 1,
+      speed: state.speed,
+      presetSeconds: { ...state.presetSeconds },
+      refillPerClick: state.refillPerClick,
+      miners: state.miners.map((miner) => ({ ...miner })),
+      events: state.events.map((event) => ({
+        ...event,
+        targets: event.targets === 'all' ? 'all' : [...event.targets],
+      })),
+      nextEventId: state.nextEventId,
+      log: state.log.map((entry) => ({ ...entry })),
+      nextLogId: state.nextLogId,
+    };
+  }
+
   /** Everything the display gets, plus the settings only the admin needs. */
   function adminSnapshot() {
     return {
@@ -343,6 +381,7 @@ export function createGame({
     tick,
     snapshot,
     adminSnapshot,
+    serialize,
     startRefill,
     refillClick,
     stopRefill,

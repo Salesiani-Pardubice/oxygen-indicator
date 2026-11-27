@@ -27,6 +27,7 @@ before(async () => {
     publicHub: createSseHub(),
     adminHub: createSseHub(),
     auth: createAuth({ pin: PIN }),
+    lanAddresses: () => ['192.168.0.10'],
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -216,4 +217,11 @@ test('the admin can start and end events', async () => {
 test('the admin can clear the log', async () => {
   const { cookie } = await adminLogin();
   assert.equal((await adminPost(cookie, { type: 'clearLog' })).status, 200);
+});
+
+test('info lists the URLs where phones can reach the server', async () => {
+  const info = await (await fetch(`${baseUrl}/api/info`)).json();
+  const port = new URL(baseUrl).port;
+  assert.deepEqual(info.adminUrls, [`http://192.168.0.10:${port}/admin`]);
+  assert.deepEqual(info.displayUrls, [`http://192.168.0.10:${port}/`]);
 });
