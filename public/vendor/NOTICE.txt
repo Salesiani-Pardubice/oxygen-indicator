@@ -1,0 +1,11 @@
+qrcode.js
+  Package:   qrcode-generator 2.0.4 (dist/qrcode.mjs from the npm tarball, unmodified)
+  Source:    https://github.com/kazuhikoarase/qrcode-generator
+  Copyright: (c) 2009 Kazuhiko Arase
+  License:   MIT (see the header of the file)
+  SHA-256:   ea91d7118a5395289170da848b7c6758b996163bfbccf312591ab65a4911b7c0
+
+Vendored (not installed through npm) so that the app works offline, with no CDN and no
+runtime dependencies to install. Used only to draw the QR code to the admin page in the
+"Připojení" dialog (public/js/qr.js). To update: replace the file with the new release's
+dist/qrcode.mjs, update the version and SHA-256 above and in test/qr.test.js.

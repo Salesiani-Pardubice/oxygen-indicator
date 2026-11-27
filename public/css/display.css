@@ -308,3 +308,28 @@ body.display {
 .modal-box .hint {
   margin: 1rem 0;
 }
+
+.qr-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.qr-list figure {
+  margin: 0;
+  max-width: 15rem;
+  text-align: center;
+}
+
+.qr svg {
+  display: block;
+  width: 15rem;
+  height: 15rem;
+  border-radius: 0.5rem;
+}
+
+.qr-list figcaption {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  word-break: break-all;
+}

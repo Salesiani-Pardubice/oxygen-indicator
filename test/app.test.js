@@ -225,3 +225,9 @@ test('info lists the URLs where phones can reach the server', async () => {
   assert.deepEqual(info.adminUrls, [`http://192.168.0.10:${port}/admin`]);
   assert.deepEqual(info.displayUrls, [`http://192.168.0.10:${port}/`]);
 });
+
+test('serves the vendored QR library as JavaScript', async () => {
+  const res = await fetch(`${baseUrl}/vendor/qrcode.js`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/javascript/);
+});
