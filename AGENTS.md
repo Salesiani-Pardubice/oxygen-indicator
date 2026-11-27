@@ -10,7 +10,7 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 
 ## Project status
 
-Feature-complete according to the original plan (all 8 planned features implemented, one PR each); open items are listed at the end. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it.
+Feature-complete according to the original plan (all planned features are implemented and merged, one PR each); only the unscheduled ideas at the end remain. `README.md` is the original design brief (in Czech); this file records the decisions made on top of it.
 
 ## Commands
 
@@ -24,7 +24,7 @@ Feature-complete according to the original plan (all 8 planned features implemen
 
 ## Stack and structure
 
-- **Server:** plain Node.js (`node:http`), ES modules, **no runtime dependencies**. Keep it that way unless there is a strong reason; the app has to be runnable offline after copying the folder.
+- **Server:** plain Node.js (`node:http`), ES modules, **no runtime dependencies**. Keep it that way unless there is a strong reason; the app has to be runnable offline after copying the folder. The one exception is third-party code vendored as a file under `public/vendor/` (currently `qrcode.js`, see `public/vendor/NOTICE.txt` for version/license/checksum; a test pins its SHA-256). Adding any further third-party code needs the user's approval.
 - **Realtime:** server → clients via SSE (Server-Sent Events); clients → server via `POST`.
 - **Web:** vanilla HTML/CSS/JS in `public/`, no build step. `/` is the display, `/admin` the admin page. Sounds are generated with Web Audio (no audio files).
 - `server/game.js` — the authoritative game state (`createGame({ clock })`: `tick()`, `snapshot()`, plus the commands). The clock is injectable, so tests advance fake time instead of waiting.
@@ -34,7 +34,7 @@ Feature-complete according to the original plan (all 8 planned features implemen
 - Expiry log (game state, `state.log`, admin snapshot only): when a miner's oxygen hits 0 an entry `{ id, minerId, minerName, expiredAt, recoveredAt }` is added once; it stays open until that miner is refilled (or on reset / miner removed). `zeroSeconds` is computed per snapshot. `resetGame` keeps the log; `clearLog` keeps still-open entries. The game takes an injectable `wallClock` (epoch ms) next to the monotonic `clock`.
 - Phone alerts: the admin page compares log ids with the last seen one (not on the first snapshot, so reloading doesn't alert for old expiries) and then beeps, vibrates and shows a banner (`admin-alerts.js`). Sound needs a user gesture (shared `bindSoundToggle` in `ui.js`, also used by the display); wake lock only works on secure origins, so over the plain-HTTP hotspot the phone has to be kept awake by hand.
 - Persistence: `game.serialize()` ↔ `createGame({ restore })` (validated by `server/saved-state.js`, which throws on anything odd; the game's ranges are passed in so they exist only in `game.js`). `server/store.js` writes the JSON atomically (tmp file + rename); `server/persistence.js` saves every 2 s only when something changed, and `index.js` saves on SIGINT/SIGTERM. A restored game is always **paused** with no refill lock. A damaged file is renamed to `state.json.broken` and the game starts fresh. Whenever you add game state that must survive a restart, extend `serialize()` and `parseSavedState()` together (and bump `version` for incompatible changes).
-- `GET /api/info` returns the LAN URLs of the display/admin; the display's "Připojení" dialog (`public/js/connect.js`, only offered on the server PC) shows them.
+- `GET /api/info` returns the LAN URLs of the display/admin; the display's "Připojení" dialog (`public/js/connect.js`, only offered on the server PC) shows them, with a QR code per admin URL (`public/js/qr.js` wraps the vendored `qrcode-generator`).
 - Admin client: `public/js/admin.js` (+ `ui.js` segmented buttons/toast, `admin-events.js`, `admin-log.js`, `admin-alerts.js` for the cards; `log.js` has the pure log helpers). It updates DOM in place and never overwrites an input that has focus.
 - `server/app.js` — HTTP routing and static serving; `server/sse.js` — SSE hub; `server/http-utils.js` — response helpers; `server/index.js` — wiring and the 250 ms tick/broadcast loop; `server/network.js` — LAN address discovery.
 - `public/js/display.js` renders snapshots into gauges (DOM updated in place so CSS transitions work); `levels.js` (ok/low/critical/empty thresholds) and `format.js` (time formatting, Czech preset labels) are shared helpers.
@@ -74,9 +74,7 @@ Depletion per second = `100 / preset_duration_s × global_multiplier × event_mu
 5. Admin: PIN, names, number of miners, pause, speed, presets (done)
 6. Special events with countdown (done)
 7. Expiry log + phone alerts (done)
-8. State backup to `data/state.json` (restart restores the game paused), URL dialog (done; the QR code was left out, see below)
-
-Open: a QR code to the admin page in the "Připojení" dialog. It needs a QR encoder; the candidate is the MIT-licensed `qrcode-generator` (single file, no dependencies) vendored into `public/vendor/`, but it is not added until the user approves adding third-party code.
+8. State backup to `data/state.json` (restart restores the game paused), URL dialog (done)
 
 Unscheduled ideas: manual +/- oxygen per miner, sound on event start, CSV export of the log, projector mode with team colors.
 

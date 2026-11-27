@@ -31,4 +31,4 @@ Server vypíše adresy displeje a administrace, např. `http://192.168.0.153:300
 
 Speciální události (např. prasklá bomba) se definují v souboru `config/events.json`: název, násobič spotřeby a výchozí trvání v sekundách (`null` = do ručního ukončení). Při spuštění události v administraci lze trvání i dotčené horníky změnit.
 
-Rozehraná hra se průběžně ukládá do `data/state.json` (jiné místo: proměnná `STATE_FILE`). Po restartu serveru se hra obnoví **pozastavená**; zcela novou hru začnete tlačítkem „Nová hra“ v administraci, případně smazáním souboru `data/state.json` při vypnutém serveru. Na displeji na počítači s serverem je tlačítko „Připojení“, které ukáže adresy pro mobil.
+Rozehraná hra se průběžně ukládá do `data/state.json` (jiné místo: proměnná `STATE_FILE`). Po restartu serveru se hra obnoví **pozastavená**; zcela novou hru začnete tlačítkem „Nová hra“ v administraci, případně smazáním souboru `data/state.json` při vypnutém serveru. Na displeji na počítači se serverem je tlačítko „Připojení“, které ukáže adresy pro mobil a QR kód k administraci.
